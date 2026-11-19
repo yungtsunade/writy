@@ -272,6 +272,7 @@ body.desktop .desk-only{display:flex!important}
     <div class="fontprev px" id="fontPrev">Der Satz, mit dem alles anfängt.</div>
     <div class="row"><span>GRÖSSE</span><input type="range" id="oSize" min="14" max="30" step="1"></div>
     <div class="row"><span>TAGESZIEL (WÖRTER)</span><input type="number" id="oGoal" min="0" step="50"></div>
+    <div class="row"><span>VOLLBILD (STRG+J)</span><span class="opts" id="oFull"></span></div>
     <div class="row"><span>SOUNDS</span><span class="opts" id="oSound"></span></div>
     <div class="row desk-only" id="rowFolder"><span>SPEICHERORT</span><button class="btn sky" id="bFolder">ÄNDERN</button><span class="folder-path" id="folderPath"></span></div>
     <div class="row"><span>COMPANION</span><button class="btn lilac" id="bComp">ÖFFNEN ›</button></div>
@@ -817,6 +818,33 @@ $('#eCopy').onclick = async () => {
 };
 $('#bExport').onclick = () => openModal('#mExport');
 
+/* fullscreen */
+let fsOn = false;
+function renderFull(){
+  const el = $('#oFull'); if (!el) return; el.innerHTML = '';
+  [[true,'AN'],[false,'AUS']].forEach(([v,l]) => {
+    const b = document.createElement('button'); b.className = 'btn ghost' + (fsOn === v ? ' on' : ''); b.textContent = l;
+    b.onclick = () => { blip('click'); setFull(v); };
+    el.appendChild(b);
+  });
+}
+async function setFull(on){
+  if (on === fsOn) return;
+  try {
+    if (DESK) await invoke('set_fullscreen', {on});
+    else if (on) await document.documentElement.requestFullscreen();
+    else if (document.fullscreenElement) await document.exitFullscreen();
+    fsOn = on;
+  } catch(e){ say('Vollbild geht hier leider nicht.', 'wiggle', 3000); }
+  document.body.classList.toggle('fullscreen', fsOn);
+  renderFull();
+  if (fsOn) say('Vollbild! Esc beendet es.', 'hop', 2600);
+}
+document.addEventListener('fullscreenchange', () => {
+  if (DESK) return;
+  fsOn = !!document.fullscreenElement; document.body.classList.toggle('fullscreen', fsOn); renderFull();
+});
+
 /* focus */
 function setFocus(on){
   document.body.classList.toggle('focus', on);
@@ -850,6 +878,7 @@ function renderSettings(){
   optButtons($('#oFont'), Object.entries(FONTS).map(([k,f]) => [k,f.label]), 'font');
   optButtons($('#oSound'), [[true,'AN'],[false,'AUS']], 'sound');
   optButtons($('#oComp'), [[true,'AN'],[false,'AUS']], 'companion');
+  renderFull();
   $('#oSize').value = S.settings.size;
   $('#oGoal').value = S.settings.goal;
 }
@@ -865,8 +894,12 @@ $('#cBack').onclick = () => { $('#mCompanion').classList.remove('open'); renderS
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape'){
     if (document.querySelector('.scrim.open')) closeModals();
+    else if (fsOn) setFull(false);
     else if (document.body.classList.contains('focus')) setFocus(false);
     else document.body.classList.remove('drawer');
+  }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'j'){
+    e.preventDefault(); setFull(!fsOn);
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
     e.preventDefault(); saveT = saveT || setTimeout(()=>{},0); flushSave(); blip('save'); say('Gespeichert!');

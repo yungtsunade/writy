@@ -152,6 +152,11 @@ async fn save_as(app: tauri::AppHandle, name: String, text: String) -> Result<bo
 }
 
 #[tauri::command]
+fn set_fullscreen(window: tauri::WebviewWindow, on: bool) -> Result<(), String> {
+    window.set_fullscreen(on).map_err(err)
+}
+
+#[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
@@ -167,6 +172,7 @@ fn main() {
             delete_doc,
             pick_folder,
             save_as,
+            set_fullscreen,
             quit_app
         ])
         .on_window_event(|window, event| {

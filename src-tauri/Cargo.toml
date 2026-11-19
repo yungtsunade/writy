@@ -1,6 +1,6 @@
 [package]
 name = "writy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Writy – eine kleine Schreib-App im 8-Bit-Look"
 edition = "2021"
 
