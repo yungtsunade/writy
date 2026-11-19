@@ -250,7 +250,7 @@ body.desktop .desk-only{display:flex!important}
       </div>
       <textarea id="ed" spellcheck="true" placeholder="Einfach losschreiben …&#10;&#10;Die erste Zeile wird zum Titel."></textarea>
       <div class="bubble px" id="bubble"></div>
-      <div class="mascot" id="mascot" title="Klecks" role="img" aria-label="Klecks, dein Schreibbegleiter"></div>
+      <div class="mascot" id="mascot" title="Writy" role="img" aria-label="Writy, dein Schreibbegleiter"></div>
       <div class="zzz">Z z</div>
     </div>
   </main>
@@ -275,7 +275,7 @@ body.desktop .desk-only{display:flex!important}
     <div class="row"><span>VOLLBILD (STRG+J)</span><span class="opts" id="oFull"></span></div>
     <div class="row"><span>SOUNDS</span><span class="opts" id="oSound"></span></div>
     <div class="row desk-only" id="rowFolder"><span>SPEICHERORT</span><button class="btn sky" id="bFolder">ÄNDERN</button><span class="folder-path" id="folderPath"></span></div>
-    <div class="row"><span>COMPANION</span><button class="btn lilac" id="bComp">ÖFFNEN ›</button></div>
+    <div class="row"><span>WRITY (SCHREIB-BUDDY)</span><button class="btn lilac" id="bComp">ÖFFNEN ›</button></div>
     <div class="actions"><button class="btn mint" data-close>FERTIG</button></div>
   </div>
 </div>
@@ -283,8 +283,8 @@ body.desktop .desk-only{display:flex!important}
 <!-- companion -->
 <div class="scrim" id="mCompanion">
   <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hComp">
-    <h2 id="hComp">COMPANION</h2>
-    <p>Klecks begleitet dich beim Schreiben, feuert dich an und freut sich über dein Tagesziel.</p>
+    <h2 id="hComp">WRITY (SCHREIB-BUDDY)</h2>
+    <p>Writy begleitet dich beim Schreiben, feuert dich an und freut sich über dein Tagesziel.</p>
     <div class="row"><span>ANZEIGEN</span><span class="opts" id="oComp"></span></div>
     <div class="actions"><button class="btn ghost" id="cBack">‹ ZURÜCK</button><button class="btn mint" data-close>FERTIG</button></div>
   </div>
@@ -357,7 +357,7 @@ S.docs = DESK ? [] : (Array.isArray(S.docs) ? S.docs : []);
 S.settings = Object.assign({theme:'tag', font:'pixel', size:20, goal:500, sound:true, companion:true}, S.settings||{});
 const WELCOME = 'Willkommen bei Writy!\n\nHier schreibst du einfach drauflos. ' +
   (DESK ? 'Jedes Dokument wird automatisch als .md-Datei in deinem Writy-Ordner gespeichert.' : 'Alles wird automatisch in deinem Browser gespeichert.') +
-  '\n\n• Die erste Zeile ist der Titel des Dokuments' + (DESK ? ' und der Dateiname' : '') + '.\n• FOKUS blendet alles aus außer deinem Text (Esc beendet ihn).\n• Unter OPTIONEN findest du Schriften, den Nachtmodus und dein Tagesziel.\n• Tipp „- “ oder „1. “ am Zeilenanfang für eine Liste.\n• Klick auf Klecks unten rechts, wenn du Zuspruch brauchst.\n\nDieses Dokument kannst du einfach löschen.';
+  '\n\n• Die erste Zeile ist der Titel des Dokuments' + (DESK ? ' und der Dateiname' : '') + '.\n• FOKUS blendet alles aus außer deinem Text (Esc beendet ihn).\n• Unter OPTIONEN findest du Schriften, den Nachtmodus und dein Tagesziel.\n• Tipp „- “ oder „1. “ am Zeilenanfang für eine Liste.\n• Klick auf Writy unten rechts, wenn du Zuspruch brauchst.\n\nDieses Dokument kannst du einfach löschen.';
 const totalWords = () => S.docs.reduce((n,d) => n + countWords(d.text), 0);
 function finishLoad(){
   if (!S.docs.length) {
@@ -934,7 +934,7 @@ async function init(){
   lastMilestone = Math.floor(totalWords()/100);
   renderList(); renderStats(); wake();
   if (firstRun) openModal('#mFolder');
-  setTimeout(() => say('Hi! Ich bin Klecks.', 'hop', 2600), 500);
+  setTimeout(() => say('Hi! Ich bin Writy.', 'hop', 2600), 500);
 }
 init();
 })();
