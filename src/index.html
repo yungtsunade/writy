@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writy</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+@font-face{font-family:'WrityBullets';src:local('Arial'),local('Helvetica'),local('Segoe UI'),local('Segoe UI Symbol'),local('DejaVu Sans'),local('Noto Sans'),local('Liberation Sans');unicode-range:U+2022,U+25E6,U+25AA}
+:root{
+  --ink:#3b2a4a; --ink-soft:#6b5a7a;
+  --bg:#ffe9d6; --bg-dot:#f9dcc4;
+  --paper:#fffaf0; --panel:#fff4e0;
+  --berry:#ff6f91; --mint:#6fd6b6; --mint-hi:#b8f2e0; --butter:#ffd166; --sky:#8ecae6; --lilac:#c3a6ff;
+  --cheek:#ff9eb5; --select:#ffd16688;
+  --ui:'Press Start 2P', monospace;
+  --px:4px;
+}
+[data-theme="nacht"]{
+  --ink:#f3e8ff; --ink-soft:#b9a7cf;
+  --bg:#1d1530; --bg-dot:#251b3d;
+  --paper:#2a2045; --panel:#2f2450;
+  --berry:#ff7aa2; --mint:#5cc9a7; --mint-hi:#9be8d0; --butter:#f7c65c; --sky:#6fb6d9; --lilac:#a98bff;
+  --select:#a98bff66;
+}
+[data-theme="matrix"]{
+  --ink:#39ff6a; --ink-soft:#1f9e45;
+  --bg:#000; --bg-dot:#021006;
+  --paper:#010803; --panel:#03140a;
+  --berry:#7dffa0; --mint:#1fd655; --mint-hi:#0e4a20; --butter:#39ff6a; --sky:#22c55e; --lilac:#16a34a;
+  --cheek:#0e4a20; --select:#39ff6a55;
+}
+[data-theme="matrix"] body{text-shadow:0 0 3px rgba(57,255,106,.55)}
+[data-theme="matrix"] textarea#ed{text-shadow:0 0 4px rgba(57,255,106,.6)}
+[data-theme="matrix"] .btn,[data-theme="matrix"] .btn.berry,[data-theme="matrix"] .opts .btn.on,
+[data-theme="matrix"] .doc.active,[data-theme="matrix"] .banner{color:#001a06;text-shadow:none}
+[data-theme="matrix"] .btn.ghost{color:var(--ink);text-shadow:0 0 3px rgba(57,255,106,.55)}
+[data-theme="matrix"] .opts .btn.on{color:#001a06;text-shadow:none}
+[data-theme="matrix"] .doc.active{background:var(--mint)}
+[data-theme="matrix"] .logo h1{text-shadow:0 0 6px rgba(57,255,106,.8)}
+[data-theme="matrix"] .modal h2{text-shadow:0 0 6px rgba(57,255,106,.8)}
+[data-theme="matrix"] .scrim{background:rgba(0,0,0,.7)}
+[data-theme="matrix"] body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px,rgba(0,0,0,0) 4px);}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(45deg,var(--bg-dot) 25%,transparent 25%,transparent 75%,var(--bg-dot) 75%),
+    linear-gradient(45deg,var(--bg-dot) 25%,transparent 25%,transparent 75%,var(--bg-dot) 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px;
+  color:var(--ink);font-family:var(--ui);
+  -webkit-font-smoothing:none;
+}
+::selection{background:var(--select)}
+
+/* pixel frame: notched corners via 4 shadows */
+.px{
+  box-shadow:
+    calc(var(--px)*-1) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    0 calc(var(--px)*-1) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink);
+}
+.px-drop{
+  box-shadow:
+    calc(var(--px)*-1) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    0 calc(var(--px)*-1) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    8px 8px 0 0 rgba(59,42,74,.18);
+}
+
+.btn{
+  font-family:var(--ui);font-size:10px;line-height:1;letter-spacing:.5px;
+  color:#3b2a4a;background:var(--butter);border:0;cursor:pointer;
+  padding:10px 12px;margin:4px;
+  box-shadow:
+    -4px 0 0 0 var(--ink),4px 0 0 0 var(--ink),0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),
+    inset 0 -4px 0 0 rgba(0,0,0,.18), inset 0 4px 0 0 rgba(255,255,255,.45);
+  transition:transform .05s;
+  white-space:nowrap;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn:active,.btn.on{
+  transform:translateY(2px);
+  box-shadow:
+    -4px 0 0 0 var(--ink),4px 0 0 0 var(--ink),0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),
+    inset 0 4px 0 0 rgba(0,0,0,.18);
+}
+.btn:focus-visible{outline:3px dashed var(--berry);outline-offset:6px}
+.btn.mint{background:var(--mint)} .btn.berry{background:var(--berry);color:#fff}
+.btn.sky{background:var(--sky)} .btn.lilac{background:var(--lilac)}
+.btn.ghost{background:var(--panel);color:var(--ink)}
+.opts .btn.on{background:var(--berry);color:#fff}
+
+/* layout */
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr auto;height:100vh;gap:16px;padding:16px 20px 14px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;margin-right:auto;padding:4px 6px}
+.logo h1{font-size:14px;margin:0;letter-spacing:1px;text-shadow:2px 2px 0 var(--berry)}
+.logo svg{width:28px;height:28px;image-rendering:pixelated}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+aside{background:var(--panel);display:flex;flex-direction:column;min-height:0;margin:4px}
+.side-head{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 6px;font-size:10px}
+.search{margin:6px 12px 10px;padding:8px 10px;font-family:'Pixelify Sans',sans-serif;font-size:15px;
+  background:var(--paper);color:var(--ink);border:0;box-shadow:inset 0 0 0 3px var(--ink);outline:none}
+.search:focus{box-shadow:inset 0 0 0 3px var(--berry)}
+.doclist{list-style:none;margin:0;padding:4px 10px 12px;overflow:auto;flex:1}
+.doc{padding:10px 10px 9px;margin:0 0 8px;cursor:pointer;background:var(--paper);position:relative;
+  box-shadow:inset 0 0 0 3px transparent}
+.doc:hover{box-shadow:inset 0 0 0 3px var(--ink-soft)}
+.doc.active{background:var(--mint-hi);box-shadow:inset 0 0 0 3px var(--ink);color:#3b2a4a}
+.doc .t{font-family:'Pixelify Sans',sans-serif;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:26px}
+.doc .m{font-size:8px;margin-top:6px;opacity:.7;line-height:1.4}
+.doc .del{position:absolute;top:7px;right:6px;border:0;background:transparent;color:inherit;font-family:var(--ui);font-size:10px;cursor:pointer;padding:4px;opacity:0}
+.doc:hover .del,.doc.active .del,.doc .del:focus{opacity:.75}
+.doc .del:hover{color:var(--berry);opacity:1}
+.empty-list{font-size:9px;line-height:1.6;padding:10px;opacity:.7}
+
+main{position:relative;min-height:0;display:flex;flex-direction:column;margin:4px}
+.paper{flex:1;display:flex;flex-direction:column;background:var(--paper);min-height:0;position:relative}
+.paper-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:4px solid var(--ink);font-size:9px}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;display:block}
+.dots i:nth-child(1){background:var(--berry)}.dots i:nth-child(2){background:var(--butter)}.dots i:nth-child(3){background:var(--mint)}
+.doc-title{margin-left:8px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.save-state{white-space:nowrap}
+.save-state.dirty{color:var(--berry)}
+textarea#ed{
+  flex:1;width:100%;resize:none;border:0;outline:none;background:transparent;color:var(--ink);
+  padding:28px clamp(18px,6vw,80px) 90px;line-height:1.65;
+  font-family:'Pixelify Sans',sans-serif;font-size:20px;
+  caret-color:var(--berry);
+}
+textarea#ed::placeholder{color:var(--ink-soft);opacity:.7}
+
+/* mascot */
+.mascot{position:absolute;right:18px;bottom:14px;width:70px;height:65px;cursor:pointer;z-index:3}
+.mascot svg{width:100%;height:100%;image-rendering:pixelated;overflow:visible}
+.mascot .lid{display:none}
+.mascot.closed .eye{display:none}.mascot.closed .lid{display:block}
+.mascot.hop svg{animation:hop .5s steps(4)}
+.mascot.wiggle svg{animation:wiggle .6s steps(6)}
+.mascot.party svg{animation:party .9s steps(6) 2}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px)}70%{transform:translateY(-4px)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+@keyframes party{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-16px) rotate(-10deg)}50%{transform:translateY(0)}75%{transform:translateY(-16px) rotate(10deg)}}
+.zzz{position:absolute;right:62px;bottom:62px;font-size:10px;display:none;animation:float 2s steps(4) infinite}
+.mascot.sleepy~.zzz{display:block}
+@keyframes float{0%{transform:translate(0,0);opacity:1}100%{transform:translate(-6px,-14px);opacity:0}}
+.bubble{position:absolute;right:92px;bottom:52px;max-width:220px;background:var(--paper);color:var(--ink);
+  font-size:9px;line-height:1.6;padding:10px 12px;z-index:4;opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .15s steps(3),transform .15s steps(3)}
+.bubble.show{opacity:1;transform:none}
+.bubble::after{content:"";position:absolute;right:-12px;bottom:10px;width:8px;height:8px;background:var(--ink);
+  box-shadow:-4px -4px 0 0 var(--paper)}
+
+footer{grid-column:1/-1;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:9px;padding:2px 6px}
+.stat b{color:var(--berry);font-weight:normal}
+.goal{display:flex;align-items:center;gap:8px;margin-left:auto}
+.goalbar{display:flex;gap:3px}
+.goalbar i{width:12px;height:12px;display:block;background:var(--panel);box-shadow:inset 0 0 0 2px var(--ink-soft)}
+.goalbar i.f{background:var(--berry);box-shadow:inset 0 0 0 2px var(--ink)}
+.goalbar.done i.f{background:var(--mint)}
+
+/* focus mode */
+body.focus .app{grid-template-columns:1fr}
+body.focus aside,body.focus header .toolbar .hide-focus,body.focus .side-toggle{display:none}
+body.focus main{max-width:900px;width:100%;margin:4px auto}
+body.focus header .logo h1{opacity:.4}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(29,21,48,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.scrim.open{display:flex}
+.modal{background:var(--panel);width:min(440px,100%);padding:20px 22px 18px;max-height:90vh;overflow:auto}
+.modal h2{font-size:12px;margin:0 0 18px;text-shadow:2px 2px 0 var(--berry)}
+.modal p{font-size:9px;line-height:1.7;margin:0 0 14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px;font-size:9px;flex-wrap:wrap}
+.row .opts{display:flex;flex-wrap:wrap;gap:4px}
+.row input[type=number]{width:90px;font-family:var(--ui);font-size:10px;padding:8px;border:0;background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 3px var(--ink)}
+.row input[type=range]{accent-color:var(--berry);width:150px}
+.actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px;flex-wrap:wrap}
+.fontprev{font-size:18px;line-height:1.4;margin:-6px 0 16px;padding:10px 12px;background:var(--paper)}
+
+.banner{position:fixed;left:50%;top:10px;transform:translateX(-50%);background:var(--berry);color:#fff;font-size:9px;line-height:1.6;padding:10px 14px;z-index:60;display:none;max-width:90vw}
+.banner.show{display:block}
+
+.side-toggle{display:none}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;padding:12px 12px 10px;gap:12px}
+  aside{position:fixed;left:12px;top:70px;bottom:60px;width:min(300px,82vw);z-index:40;transform:translateX(-120%);transition:transform .15s steps(4)}
+  body.drawer aside{transform:none}
+  .side-toggle{display:inline-block}
+  .logo h1{font-size:11px}
+  .btn{font-size:9px;padding:9px 9px}
+  textarea#ed{padding:20px 16px 90px}
+  .goal{margin-left:0}
+  .mascot{width:48px;height:45px;right:10px;bottom:8px}
+  .bubble{right:64px;bottom:36px}
+}
+@media (prefers-reduced-motion:reduce){
+  .mascot svg,.zzz{animation:none!important}
+}
+body.no-companion .mascot,body.no-companion .bubble,body.no-companion .zzz{display:none!important}
+.desk-only{display:none!important}
+body.desktop .desk-only{display:flex!important}
+.folder-path{flex-basis:100%;font-family:'Atkinson Hyperlegible',sans-serif;font-size:13px;line-height:1.4;word-break:break-all;opacity:.85;padding:8px 10px;background:var(--paper);box-shadow:inset 0 0 0 2px var(--ink-soft)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="banner" id="banner"></div>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 8 8" aria-hidden="true" shape-rendering="crispEdges">
+        <rect x="5" y="0" width="2" height="1" fill="var(--berry)"/><rect x="4" y="1" width="3" height="1" fill="var(--berry)"/>
+        <rect x="3" y="2" width="3" height="1" fill="var(--berry)"/><rect x="2" y="3" width="3" height="1" fill="var(--butter)"/>
+        <rect x="2" y="4" width="2" height="1" fill="var(--butter)"/><rect x="1" y="5" width="2" height="1" fill="var(--ink)"/>
+        <rect x="0" y="6" width="2" height="1" fill="var(--ink)"/><rect x="0" y="7" width="1" height="1" fill="var(--ink)"/>
+      </svg>
+      <h1>WRITY</h1>
+    </div>
+    <div class="toolbar">
+      <button class="btn ghost side-toggle" id="bSide" aria-label="Dokumente zeigen">DOKS</button>
+      <button class="btn mint hide-focus" id="bNew">+ NEU</button>
+      <button class="btn sky hide-focus" id="bImport">IMPORT</button>
+      <button class="btn sky hide-focus" id="bExport">EXPORT</button>
+      <button class="btn lilac" id="bFocus" title="Fokusmodus (Esc beendet)">FOKUS</button>
+      <button class="btn ghost hide-focus" id="bSettings">OPTIONEN</button>
+      <input type="file" id="file" class="sr" accept=".txt,.md,.markdown,text/plain,text/markdown" multiple>
+    </div>
+  </header>
+
+  <aside class="px-drop" id="side">
+    <div class="side-head"><span>DOKUMENTE</span><span id="docCount">0</span></div>
+    <input class="search" id="search" placeholder="Suchen …" aria-label="Dokumente durchsuchen">
+    <ul class="doclist" id="list"></ul>
+  </aside>
+
+  <main>
+    <div class="paper px-drop">
+      <div class="paper-bar">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="doc-title" id="docTitle">Ohne Titel</div>
+        <div class="save-state" id="saveState">✓ GESPEICHERT</div>
+      </div>
+      <textarea id="ed" spellcheck="true" placeholder="Einfach losschreiben …&#10;&#10;Die erste Zeile wird zum Titel."></textarea>
+      <div class="bubble px" id="bubble"></div>
+      <div class="mascot" id="mascot" title="Klecks" role="img" aria-label="Klecks, dein Schreibbegleiter"></div>
+      <div class="zzz">Z z</div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="stat">WÖRTER <b id="sWords">0</b></span>
+    <span class="stat">ZEICHEN <b id="sChars">0</b></span>
+    <span class="stat">LESEZEIT <b id="sRead">0</b> MIN</span>
+    <span class="goal"><span>HEUTE <b id="sToday" style="color:var(--berry);font-weight:normal">0</b>/<span id="sGoal">500</span></span><span class="goalbar" id="goalbar"></span></span>
+  </footer>
+</div>
+
+<!-- settings -->
+<div class="scrim" id="mSettings">
+  <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hSet">
+    <h2 id="hSet">OPTIONEN</h2>
+    <div class="row"><span>LOOK</span><span class="opts" id="oTheme"></span></div>
+    <div class="row"><span>SCHRIFT</span><span class="opts" id="oFont"></span></div>
+    <div class="fontprev px" id="fontPrev">Der Satz, mit dem alles anfängt.</div>
+    <div class="row"><span>GRÖSSE</span><input type="range" id="oSize" min="14" max="30" step="1"></div>
+    <div class="row"><span>TAGESZIEL (WÖRTER)</span><input type="number" id="oGoal" min="0" step="50"></div>
+    <div class="row"><span>SOUNDS</span><span class="opts" id="oSound"></span></div>
+    <div class="row desk-only" id="rowFolder"><span>SPEICHERORT</span><button class="btn sky" id="bFolder">ÄNDERN</button><span class="folder-path" id="folderPath"></span></div>
+    <div class="row"><span>COMPANION</span><button class="btn lilac" id="bComp">ÖFFNEN ›</button></div>
+    <div class="actions"><button class="btn mint" data-close>FERTIG</button></div>
+  </div>
+</div>
+
+<!-- companion -->
+<div class="scrim" id="mCompanion">
+  <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hComp">
+    <h2 id="hComp">COMPANION</h2>
+    <p>Klecks begleitet dich beim Schreiben, feuert dich an und freut sich über dein Tagesziel.</p>
+    <div class="row"><span>ANZEIGEN</span><span class="opts" id="oComp"></span></div>
+    <div class="actions"><button class="btn ghost" id="cBack">‹ ZURÜCK</button><button class="btn mint" data-close>FERTIG</button></div>
+  </div>
+</div>
+
+<!-- export -->
+<div class="scrim" id="mExport">
+  <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hExp">
+    <h2 id="hExp">EXPORT</h2>
+    <p>Aktuelles Dokument als Datei speichern oder in die Zwischenablage kopieren.</p>
+    <div class="actions" style="justify-content:flex-start">
+      <button class="btn sky" id="eTxt">.TXT</button>
+      <button class="btn sky" id="eMd">.MD</button>
+      <button class="btn butter" id="eCopy">KOPIEREN</button>
+    </div>
+    <div class="actions"><button class="btn ghost" data-close>ZURÜCK</button></div>
+  </div>
+</div>
+
+<!-- folder (desktop first run) -->
+<div class="scrim" id="mFolder">
+  <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hFolder">
+    <h2 id="hFolder">SPEICHERORT</h2>
+    <p>Writy speichert jedes Dokument als eigene .md-Datei. Gerade ist dieser Ordner eingestellt:</p>
+    <p class="folder-path" id="folderPath2"></p>
+    <p>Du kannst das später unter OPTIONEN ändern.</p>
+    <div class="actions"><button class="btn sky" id="bFolder2">ANDEREN ORDNER</button><button class="btn mint" data-close>PASST SO</button></div>
+  </div>
+</div>
+
+<!-- confirm -->
+<div class="scrim" id="mConfirm">
+  <div class="modal px-drop" role="dialog" aria-modal="true" aria-labelledby="hConf">
+    <h2 id="hConf">LÖSCHEN?</h2>
+    <p id="confText"></p>
+    <div class="actions"><button class="btn ghost" data-close>NEIN</button><button class="btn berry" id="confYes">JA, WEG DAMIT</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const KEY = 'pixelfeder.v1';
+const DKEY = 'writy.desktop.v1';
+const T = window.__TAURI__;
+const DESK = !!(T && T.core && T.core.invoke);
+const invoke = DESK ? T.core.invoke : null;
+if (DESK) document.body.classList.add('desktop');
+const FONTS = {
+  pixel:  {label:'PIXEL',    css:"'WrityBullets', 'Pixelify Sans', sans-serif", scale:1},
+  retro:  {label:'TERMINAL', css:"'WrityBullets', 'VT323', monospace",          scale:1.3},
+  typo:   {label:'WRITER 1', css:"'WrityBullets', 'Courier New', 'Courier Prime', Courier, monospace", scale:1},
+  prime:  {label:'WRITER 2', css:"'WrityBullets', 'Courier Prime', 'Courier New', monospace", scale:.95},
+  klar:   {label:'KLAR',     css:"'WrityBullets', 'Atkinson Hyperlegible', sans-serif", scale:.92},
+  buch:   {label:'BUCH',     css:"'WrityBullets', 'Lora', Georgia, serif",       scale:.92}
+};
+const $ = s => document.querySelector(s);
+const today = () => { const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const countWords = t => { const m = t.trim().match(/\S+/g); return m ? m.length : 0; };
+
+/* ---------- state & storage ---------- */
+let storageOk = true;
+function load(){
+  try { const raw = localStorage.getItem(DESK ? DKEY : KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ storageOk = false; return null; }
+}
+let S = load() || {};
+S.docs = DESK ? [] : (Array.isArray(S.docs) ? S.docs : []);
+S.settings = Object.assign({theme:'tag', font:'pixel', size:20, goal:500, sound:true, companion:true}, S.settings||{});
+const WELCOME = 'Willkommen bei Writy!\n\nHier schreibst du einfach drauflos. ' +
+  (DESK ? 'Jedes Dokument wird automatisch als .md-Datei in deinem Writy-Ordner gespeichert.' : 'Alles wird automatisch in deinem Browser gespeichert.') +
+  '\n\n• Die erste Zeile ist der Titel des Dokuments' + (DESK ? ' und der Dateiname' : '') + '.\n• FOKUS blendet alles aus außer deinem Text (Esc beendet ihn).\n• Unter OPTIONEN findest du Schriften, den Nachtmodus und dein Tagesziel.\n• Tipp „- “ oder „1. “ am Zeilenanfang für eine Liste.\n• Klick auf Klecks unten rechts, wenn du Zuspruch brauchst.\n\nDieses Dokument kannst du einfach löschen.';
+const totalWords = () => S.docs.reduce((n,d) => n + countWords(d.text), 0);
+function finishLoad(){
+  if (!S.docs.length) {
+    const d = {id: DESK ? 'Willkommen bei Writy!.md' : uid(), created:Date.now(), updated:Date.now(), text:WELCOME, _dirty:true};
+    S.docs.push(d);
+  }
+  if (!S.docs.find(d => d.id === S.current)) S.current = [...S.docs].sort((a,b)=>b.updated-a.updated)[0].id;
+  if (!S.day || S.day.date !== today()) S.day = {date:today(), baseline:totalWords(), celebrated:false};
+}
+if (!DESK) finishLoad();
+
+function persist(){
+  if (DESK){
+    try { const meta = Object.assign({}, S); delete meta.docs; localStorage.setItem(DKEY, JSON.stringify(meta)); } catch(e){}
+    queueDiskSave();
+    return;
+  }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); storageOk = true; }
+  catch(e){
+    if (storageOk) showBanner('Speichern im Browser klappt hier gerade nicht. Exportiere deine Texte, bevor du die Seite schließt.');
+    storageOk = false;
+  }
+}
+function showBanner(msg){ const b=$('#banner'); b.textContent=msg; b.classList.add('show'); setTimeout(()=>b.classList.remove('show'), 9000); }
+if (!storageOk) setTimeout(()=>showBanner('Speichern im Browser klappt hier gerade nicht. Exportiere deine Texte, bevor du die Seite schließt.'), 400);
+
+const cur = () => S.docs.find(d => d.id === S.current);
+const titleRaw = d => (d.text.split('\n').find(l => l.trim()) || '').replace(/^#+\s*/,'').replace(/^\s*([•◦▪]|\d{1,4}[.)])\s+/,'').trim();
+const titleOf = d => {
+  const line = (d.text.split('\n').find(l => l.trim()) || '').replace(/^#+\s*/,'').trim();
+  return line ? (line.length > 48 ? line.slice(0,48)+'…' : line) : 'Ohne Titel';
+};
+
+/* ---------- desktop: files on disk ---------- */
+const toDisk = t => t.replace(/^(\s*)[•◦▪] /gm, '$1- ');
+const fromDisk = t => t.replace(/\r\n?/g, '\n')
+  .replace(/^\t+(?=[-*+] |\d{1,4}[.)] )/gm, m => '    '.repeat(m.length))
+  .replace(/^( *)[-*+] /gm, (m, ind) => ind + bulFor(ind));
+function sanitizeName(t){
+  let n = t.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '').trim();
+  if (!n) n = 'Ohne Titel';
+  if (/^(con|prn|aux|nul|com\d|lpt\d)$/i.test(n)) n += '_';
+  return n;
+}
+const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const sameBase = (name, base) => new RegExp('^' + escRe(base) + '( \\(\\d+\\))?\\.md$', 'i').test(name);
+function uniqueName(base, selfId){
+  const taken = new Set(S.docs.filter(d => d.id !== selfId).map(d => d.id.toLowerCase()));
+  let n = base + '.md', i = 2;
+  while (taken.has(n.toLowerCase())) n = `${base} (${i++}).md`;
+  return n;
+}
+let diskChain = Promise.resolve(), diskErrShown = false;
+function queueDiskSave(){
+  diskChain = diskChain.then(diskSaveNow, diskSaveNow);
+  return diskChain;
+}
+async function diskSaveNow(){
+  if (!S.folder) return;
+  for (const d of S.docs.filter(x => x._dirty)){
+    d._dirty = false;
+    try {
+      const base = sanitizeName(titleRaw(d));
+      if (d._auto !== false && !sameBase(d.id, base)){
+        const nn = uniqueName(base, d.id), old = d.id;
+        if (d._onDisk) await invoke('rename_doc', {dir:S.folder, from:old, to:nn});
+        d.id = nn; if (S.current === old) S.current = nn;
+        renderList(); persistMetaOnly();
+      }
+      await invoke('write_doc', {dir:S.folder, name:d.id, text:toDisk(d.text)});
+      d._onDisk = true; diskErrShown = false;
+    } catch(err){
+      d._dirty = true;
+      if (!diskErrShown){ diskErrShown = true; showBanner('Speichern fehlgeschlagen: ' + err + ' – ich versuche es beim nächsten Tippen erneut.'); setDirty(true); }
+    }
+  }
+}
+function persistMetaOnly(){ try { const meta = Object.assign({}, S); delete meta.docs; localStorage.setItem(DKEY, JSON.stringify(meta)); } catch(e){} }
+function docFromFile(f){
+  const d = {id:f.name, text:fromDisk(f.text), updated:f.modified || Date.now(), created:f.modified || Date.now(), _onDisk:true};
+  d._auto = sameBase(d.id, sanitizeName(titleRaw(d)));   // only files whose name follows their title get renamed
+  return d;
+}
+async function readFolder(){
+  try { return await invoke('list_docs', {dir:S.folder}); }
+  catch(e){ showBanner('Ordner nicht lesbar: ' + e); return []; }
+}
+async function loadFolder(){
+  S.docs = (await readFolder()).map(docFromFile);
+  finishLoad();
+  persist();
+}
+async function refreshFromDisk(){
+  if (!DESK || !S.folder || saveT) return;
+  try { await diskChain; } catch(e){}
+  const list = await readFolder();
+  const byName = new Map(list.map(f => [f.name.toLowerCase(), f]));
+  let changedCur = false;
+  S.docs = S.docs.filter(d => {
+    if (!d._onDisk || d._dirty) return true;
+    const f = byName.get(d.id.toLowerCase());
+    if (!f) return false;
+    const t = fromDisk(f.text);
+    if (t !== d.text){ d.text = t; d.updated = f.modified; if (d.id === S.current) changedCur = true; }
+    return true;
+  });
+  list.forEach(f => { if (!S.docs.some(d => d.id.toLowerCase() === f.name.toLowerCase())) S.docs.push(docFromFile(f)); });
+  if (!S.docs.length || !cur()){ finishLoad(); changedCur = true; persist(); }
+  if (changedCur){ const p = ed.selectionStart; ed.value = cur().text; const q = Math.min(p, ed.value.length); ed.setSelectionRange(q, q); }
+  renderList(); renderStats();
+}
+function showFolderPath(){ $('#folderPath').textContent = S.folder || ''; $('#folderPath2').textContent = S.folder || ''; }
+async function chooseFolder(){
+  let p = null;
+  try { p = await invoke('pick_folder'); } catch(e){ showBanner('Ordnerauswahl ging nicht: ' + e); }
+  if (!p || p === S.folder) return;
+  flushSave(); try { await diskChain; } catch(e){}
+  S.folder = p; S.current = null;
+  await loadFolder();
+  ed.value = cur().text; renderList(); renderStats(); showFolderPath();
+  blip('new'); say('Neuer Ordner geladen!');
+}
+
+/* ---------- sound ---------- */
+let ac = null;
+function blip(kind){
+  if (!S.settings.sound) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const seqs = { save:[660,880], new:[523,659,784], del:[330,220], goal:[523,659,784,1047,784,1047], click:[740], copy:[880,988] };
+    const notes = seqs[kind] || seqs.click;
+    const t0 = ac.currentTime;
+    notes.forEach((f,i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      const t = t0 + i*0.075;
+      g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.045,t+0.01); g.gain.linearRampToValueAtTime(0.0001,t+0.07);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t+0.08);
+    });
+  } catch(e){}
+}
+
+/* ---------- mascot ---------- */
+const SPRITE = [
+  "......kk......",
+  ".....kbbk.....",
+  "....kbbbbk....",
+  "...kbhbbbbk...",
+  "..kbhbbbbbbk..",
+  ".kbbbbbbbbbbk.",
+  ".kbbwpbbwpbbk.",
+  "kbbbppbbppbbbk",
+  "kbcbbbkkbbbcbk",
+  "kbbbbbbbbbbbbk",
+  ".kbbbbbbbbbbk.",
+  "..kkbbbbbbkk..",
+  "....kkkkkk...."
+];
+const COL = {k:'var(--ink)', b:'var(--mint)', h:'var(--mint-hi)', w:'#ffffff', p:'#1a1024', c:'var(--cheek)'};
+(function drawMascot(){
+  let r = '';
+  SPRITE.forEach((row,y) => [...row].forEach((ch,x) => {
+    if (ch === '.') return;
+    const eye = (ch==='w'||ch==='p') ? ' class="eye"' : '';
+    const fill = (ch==='w'||ch==='p') ? COL[ch] : COL[ch];
+    r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${fill}"${eye}/>`;
+    if (eye) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="var(--mint)" class="lid"/>`;
+  }));
+  // closed-eye lines
+  r += `<rect x="4" y="7" width="2" height="1" fill="#3b2a4a" class="lid"/><rect x="8" y="7" width="2" height="1" fill="#3b2a4a" class="lid"/>`;
+  $('#mascot').innerHTML = `<svg viewBox="0 0 14 13" shape-rendering="crispEdges">${r}</svg>`;
+})();
+const mascot = $('#mascot'), bubble = $('#bubble');
+let bubbleT, animT;
+function act(anim){ mascot.classList.remove('hop','wiggle','party'); void mascot.offsetWidth; mascot.classList.add(anim); clearTimeout(animT); animT=setTimeout(()=>mascot.classList.remove(anim), 1900); }
+function say(msg, anim='hop', ms=2600){
+  if (!S.settings.companion) return;
+  bubble.textContent = msg; bubble.classList.add('show'); act(anim);
+  clearTimeout(bubbleT); bubbleT = setTimeout(()=>bubble.classList.remove('show'), ms);
+}
+setInterval(() => { if (mascot.classList.contains('sleepy')) return; mascot.classList.add('closed'); setTimeout(()=>mascot.classList.remove('closed'), 160); }, 3800);
+let idleT;
+function wake(){
+  if (mascot.classList.contains('sleepy')) { mascot.classList.remove('sleepy','closed'); }
+  clearTimeout(idleT);
+  idleT = setTimeout(()=>{ mascot.classList.add('sleepy','closed'); }, 90000);
+}
+const CHEERS = ['Weiter so!','Läuft bei dir.','Satz für Satz!','Ich les heimlich mit.','Schön geschrieben!','Noch ein Absatz?','Du machst das super.','Kleine Pause? Wasser trinken!'];
+mascot.addEventListener('click', () => { wake(); blip('click'); say(CHEERS[Math.floor(Math.random()*CHEERS.length)], 'wiggle'); });
+
+/* ---------- rendering ---------- */
+const ed = $('#ed');
+function fmtDate(ts){
+  const d = new Date(ts), n = new Date();
+  const same = d.toDateString() === n.toDateString();
+  return same ? 'HEUTE ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})
+              : d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'});
+}
+function renderList(){
+  const q = $('#search').value.trim().toLowerCase();
+  const docs = [...S.docs].sort((a,b) => b.updated - a.updated).filter(d => !q || d.text.toLowerCase().includes(q));
+  const ul = $('#list'); ul.innerHTML = '';
+  if (!docs.length){ ul.innerHTML = '<li class="empty-list">Nichts gefunden.</li>'; }
+  docs.forEach(d => {
+    const li = document.createElement('li');
+    li.className = 'doc' + (d.id === S.current ? ' active' : '');
+    li.tabIndex = 0;
+    li.innerHTML = `<div class="t"></div><div class="m"></div><button class="del" aria-label="Dokument löschen" title="Löschen">✕</button>`;
+    li.querySelector('.t').textContent = titleOf(d);
+    li.querySelector('.m').textContent = `${fmtDate(d.updated)} · ${countWords(d.text)} W.`;
+    li.addEventListener('click', e => { if (e.target.closest('.del')) return; openDoc(d.id); });
+    li.addEventListener('keydown', e => { if (e.key==='Enter') openDoc(d.id); });
+    li.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); askDelete(d.id); });
+    ul.appendChild(li);
+  });
+  $('#docCount').textContent = S.docs.length;
+}
+function renderStats(){
+  const t = ed.value, w = countWords(t);
+  $('#sWords').textContent = w;
+  $('#sChars').textContent = t.length;
+  $('#sRead').textContent = Math.max(w ? 1 : 0, Math.round(w/200));
+  const doneToday = Math.max(0, totalWords() - S.day.baseline);
+  const goal = +S.settings.goal || 0;
+  $('#sToday').textContent = doneToday; $('#sGoal').textContent = goal || '–';
+  const bar = $('#goalbar'); bar.innerHTML = '';
+  const filled = goal ? Math.min(10, Math.floor(doneToday/goal*10)) : 0;
+  for (let i=0;i<10;i++){ const b=document.createElement('i'); if(i<filled) b.className='f'; bar.appendChild(b); }
+  bar.classList.toggle('done', goal && doneToday >= goal);
+  bar.style.display = goal ? '' : 'none';
+  if (goal && doneToday >= goal && !S.day.celebrated){
+    S.day.celebrated = true; persist(); blip('goal'); say('TAGESZIEL GESCHAFFT! ★', 'party', 4200);
+  }
+  $('#docTitle').textContent = titleOf(cur());
+}
+function applySettings(){
+  document.documentElement.dataset.theme = S.settings.theme;
+  document.body.classList.toggle('no-companion', !S.settings.companion);
+  const f = FONTS[S.settings.font] || FONTS.pixel;
+  ed.style.fontFamily = f.css;
+  ed.style.fontSize = Math.round(S.settings.size * f.scale) + 'px';
+  $('#fontPrev').style.fontFamily = f.css;
+  $('#fontPrev').style.fontSize = Math.round(18 * f.scale) + 'px';
+}
+function openDoc(id){
+  flushSave();
+  S.current = id; persist();
+  const nb = normBullets(cur().text); if (nb !== cur().text){ cur().text = nb; cur()._dirty = true; }
+  ed.value = cur().text; ed.scrollTop = 0;
+  renderList(); renderStats();
+  document.body.classList.remove('drawer');
+  ed.focus({preventScroll:true});
+}
+
+/* ---------- saving ---------- */
+let saveT = null, lastMilestone = Math.floor(totalWords()/100);
+function setDirty(d){ const s=$('#saveState'); s.textContent = d ? '● SPEICHERT …' : '✓ GESPEICHERT'; s.classList.toggle('dirty', d); }
+function flushSave(){
+  if (!saveT) return;
+  clearTimeout(saveT); saveT = null;
+  const d = cur(); if (!d) return;
+  if (d.text !== ed.value){ d.text = ed.value; d.updated = Date.now(); d._dirty = true; }
+  persist(); setDirty(false); renderList();
+}
+/* ---------- bullet lists ---------- */
+const BULS = ['• ', '◦ ', '▪ '];
+const bulFor = ind => BULS[Math.floor(ind.replace(/\t/g,'    ').length / 4) % 3];
+const normBullets = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => ind + bulFor(ind));
+const lineStart = pos => ed.value.lastIndexOf('\n', pos - 1) + 1;
+const lineEnd = pos => { const i = ed.value.indexOf('\n', pos); return i === -1 ? ed.value.length : i; };
+function replaceRange(a, b, text){
+  ed.setSelectionRange(a, b);
+  let ok = false;
+  try { ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete'); } catch(e){}
+  if (!ok){ ed.setRangeText(text, a, b, 'end'); ed.dispatchEvent(new Event('input')); }
+}
+ed.addEventListener('input', e => {
+  if (e.inputType && e.inputType !== 'insertText') return;
+  const c = ed.selectionStart; if (c !== ed.selectionEnd) return;
+  const ls = lineStart(c), before = ed.value.slice(ls, c);
+  const m = before.match(/^(\s*)[-*] $/);
+  if (m) replaceRange(ls + m[1].length, c, bulFor(m[1]));
+});
+function marker(line){
+  let m = line.match(/^(\s*)[•◦▪] /);
+  if (m) return {indent:m[1], len:m[0].length, type:'b'};
+  m = line.match(/^(\s*)(\d{1,4})([.)]) /);
+  if (m) return {indent:m[1], len:m[0].length, type:'n', n:+m[2], sep:m[3]};
+  return null;
+}
+function linesWithPos(){
+  const out = []; let pos = 0;
+  ed.value.split('\n').forEach(t => { out.push({t, s:pos}); pos += t.length + 1; });
+  return out;
+}
+const isDeeper = (t, indent) => t.trim() !== '' && t.startsWith(indent) && /^\s/.test(t.slice(indent.length));
+function nextNumber(lines, idx, indent){
+  for (let i = idx - 1; i >= 0; i--){
+    const mk = marker(lines[i].t);
+    if (mk && mk.type === 'n' && mk.indent === indent) return mk.n + 1;
+    if (isDeeper(lines[i].t, indent)) continue;
+    break;
+  }
+  return 1;
+}
+// make the numbered siblings after line idx count on from n
+function renumber(idx, indent, n){
+  const lines = linesWithPos(), changes = [];
+  for (let i = idx; i < lines.length; i++){
+    const mk = marker(lines[i].t);
+    if (mk && mk.type === 'n' && mk.indent === indent){
+      if (mk.n !== n){ const a = lines[i].s + indent.length; changes.push([a, a + String(mk.n).length, String(n)]); }
+      n++; continue;
+    }
+    if (isDeeper(lines[i].t, indent)) continue;
+    break;
+  }
+  if (!changes.length) return;
+  const a = ed.selectionStart, b = ed.selectionEnd;
+  changes.reverse().forEach(([x, y, t]) => replaceRange(x, y, t));
+  ed.setSelectionRange(a, b);
+}
+ed.addEventListener('keydown', e => {
+  if (e.isComposing) return;
+  const c = ed.selectionStart, collapsed = c === ed.selectionEnd;
+  const ls = lineStart(c), le = lineEnd(c), line = ed.value.slice(ls, le);
+  const mk = marker(line);
+  if (!mk) return;
+  const indent = mk.indent, mEnd = ls + mk.len;
+  const lines = linesWithPos(), idx = ed.value.slice(0, ls).split('\n').length - 1;
+  const markFor = (ind, i) => mk.type === 'b' ? bulFor(ind) : nextNumber(lines, i, ind) + mk.sep + ' ';
+  if (e.key === 'Enter' && !e.shiftKey && collapsed && c >= mEnd){
+    e.preventDefault();
+    if (line.slice(mk.len).trim() === ''){
+      if (indent.length >= 4){
+        const ni = indent.slice(4), nm = markFor(ni, idx);
+        replaceRange(ls, le, ni + nm);
+        if (mk.type === 'n') renumber(idx + 1, ni, parseInt(nm) + 1);
+      }
+      else replaceRange(ls, le, '');
+    } else {
+      const nm = mk.type === 'b' ? bulFor(indent) : (mk.n + 1) + mk.sep + ' ';
+      replaceRange(c, c, '\n' + indent + nm);
+      if (mk.type === 'n') renumber(idx + 2, indent, mk.n + 2);
+    }
+  } else if (e.key === 'Backspace' && collapsed && c === mEnd){
+    e.preventDefault(); replaceRange(ls + indent.length, mEnd, '');
+    if (mk.type === 'n') renumber(idx + 1, indent, mk.n);
+  } else if (e.key === 'Tab' && !e.ctrlKey && !e.altKey){
+    e.preventDefault(); e.stopPropagation();
+    const off = c - mEnd;
+    let ni;
+    if (e.shiftKey){ if (!indent.length) return; ni = indent.slice(0, Math.max(0, indent.length - 4)); }
+    else ni = indent + '    ';
+    const nm = mk.type === 'b' ? bulFor(ni) : (e.shiftKey ? nextNumber(lines, idx, ni) : 1) + mk.sep + ' ';
+    replaceRange(ls, mEnd, ni + nm);
+    const p = ls + ni.length + nm.length + Math.max(0, off);
+    ed.setSelectionRange(p, p);
+    if (mk.type === 'n'){
+      if (e.shiftKey) renumber(idx + 1, ni, parseInt(nm) + 1);
+      else renumber(idx + 1, indent, nextNumber(linesWithPos(), idx + 1, indent));
+    }
+  }
+});
+
+ed.addEventListener('input', () => {
+  wake(); setDirty(true);
+  cur().text = ed.value; cur().updated = Date.now(); cur()._dirty = true;
+  renderStats();
+  clearTimeout(saveT); saveT = setTimeout(flushSave, 600);
+  const m = Math.floor(totalWords()/100);
+  if (m > lastMilestone){ lastMilestone = m; if (Math.random() < .6) say(CHEERS[Math.floor(Math.random()*6)]); }
+});
+window.addEventListener('beforeunload', flushSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+
+/* ---------- actions ---------- */
+function newDoc(text='', silent=false){
+  flushSave();
+  const d = {id: DESK ? uniqueName(sanitizeName(titleRaw({text})), null) : uid(), text, created:Date.now(), updated:Date.now(), _dirty:true};
+  S.docs.push(d); S.current = d.id; persist();
+  ed.value = text; renderList(); renderStats();
+  if (!silent){ blip('new'); say('Neues Blatt!'); }
+  document.body.classList.remove('drawer');
+  ed.focus();
+  return d;
+}
+$('#bNew').onclick = () => newDoc();
+
+let pendingDel = null;
+function askDelete(id){
+  pendingDel = id;
+  const d = S.docs.find(x => x.id === id);
+  $('#confText').textContent = `„${titleOf(d)}“ (${countWords(d.text)} Wörter) ` + (DESK ? 'wird in den Papierkorb verschoben.' : 'wird endgültig gelöscht.');
+  openModal('#mConfirm');
+}
+$('#confYes').onclick = async () => {
+  const id = pendingDel; pendingDel = null; closeModals();
+  flushSave();
+  if (DESK){
+    try { await diskChain; } catch(e){}
+    const d = S.docs.find(x => x.id === id);
+    if (d && d._onDisk){
+      try { await invoke('delete_doc', {dir:S.folder, name:d.id}); }
+      catch(err){ showBanner('Löschen ging nicht: ' + err); return; }
+    }
+  }
+  S.docs = S.docs.filter(d => d.id !== id);
+  if (!S.docs.length) S.docs.push({id: DESK ? uniqueName('Ohne Titel', null) : uid(), text:'', created:Date.now(), updated:Date.now(), _dirty:true});
+  if (!S.docs.find(d => d.id === S.current)) S.current = [...S.docs].sort((a,b)=>b.updated-a.updated)[0].id;
+  S.day.baseline = Math.min(S.day.baseline, totalWords());
+  persist(); ed.value = cur().text; renderList(); renderStats(); ed.focus();
+  blip('del'); say('Weg ist es.', 'wiggle');
+};
+
+$('#bImport').onclick = () => $('#file').click();
+$('#file').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  let n = 0;
+  for (const f of files){
+    try { const t = await f.text(); const d = newDoc(t, true); S.day.baseline += countWords(t); n++; } catch(err){}
+  }
+  persist(); renderStats();
+  if (n){ blip('new'); say(n === 1 ? 'Datei geladen!' : n + ' Dateien geladen!'); }
+});
+
+/* export */
+let dl = null;
+(async () => { try { if (window.claude && claude.use) dl = await claude.use('downloads'); } catch(e){ dl = null; } })();
+const safeName = d => (titleOf(d).replace(/[\\/:*?"<>|…]+/g,'').replace(/\s+/g,' ').trim().slice(0,60) || 'writy');
+async function saveFile(ext){
+  flushSave();
+  const d = cur(), name = safeName(d) + '.' + ext;
+  const body = ext === 'md' ? d.text.replace(/^(\s*)[•◦▪] /gm, '$1- ') : d.text;
+  if (DESK){
+    try { const ok = await invoke('save_as', {name, text:body}); if (ok){ closeModals(); blip('save'); say('Datei gespeichert!'); } }
+    catch(err){ say('Speichern ging nicht.', 'wiggle', 3000); showBanner(String(err)); }
+    return;
+  }
+  if (dl){
+    try { await dl.save({filename:name, data:body || ' '}); closeModals(); blip('save'); say('Datei gespeichert!'); }
+    catch(err){ if (err && err.code === 'declined') say('Okay, dann nicht.', 'wiggle'); else say('Download geht hier nicht. Nimm KOPIEREN.', 'wiggle', 4000); }
+    return;
+  }
+  try {
+    const blob = new Blob([body], {type: ext==='md' ? 'text/markdown' : 'text/plain'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    closeModals(); blip('save'); say('Datei gespeichert!');
+  } catch(e){ say('Download geht hier nicht. Nimm KOPIEREN.', 'wiggle', 4000); }
+}
+$('#eTxt').onclick = () => saveFile('txt');
+$('#eMd').onclick = () => saveFile('md');
+$('#eCopy').onclick = async () => {
+  flushSave();
+  try { await navigator.clipboard.writeText(cur().text); closeModals(); blip('copy'); say('Kopiert!'); }
+  catch(e){ closeModals(); ed.focus(); ed.select(); say('Text markiert – jetzt Strg+C drücken.', 'wiggle', 4000); }
+};
+$('#bExport').onclick = () => openModal('#mExport');
+
+/* focus */
+function setFocus(on){
+  document.body.classList.toggle('focus', on);
+  $('#bFocus').classList.toggle('on', on);
+  $('#bFocus').textContent = on ? 'ENDE' : 'FOKUS';
+  if (on) say('Psst. Nur du und der Text.', 'hop', 2200);
+  ed.focus();
+}
+$('#bFocus').onclick = () => setFocus(!document.body.classList.contains('focus'));
+$('#bSide').onclick = () => document.body.classList.toggle('drawer');
+$('#search').addEventListener('input', renderList);
+
+/* modals */
+let lastFocus = null;
+function openModal(sel){ lastFocus = document.activeElement; $(sel).classList.add('open'); const b = $(sel).querySelector('button'); b && b.focus(); }
+function closeModals(){ document.querySelectorAll('.scrim.open').forEach(m => m.classList.remove('open')); lastFocus && lastFocus.focus && lastFocus.focus(); }
+document.querySelectorAll('.scrim').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-close]')) closeModals(); }));
+
+/* settings */
+function optButtons(el, items, key, after){
+  el.innerHTML = '';
+  items.forEach(([val,label]) => {
+    const b = document.createElement('button'); b.className = 'btn ghost'; b.textContent = label;
+    if (S.settings[key] === val) b.classList.add('on');
+    b.onclick = () => { S.settings[key] = val; persist(); applySettings(); renderSettings(); after && after(); blip('click'); };
+    el.appendChild(b);
+  });
+}
+function renderSettings(){
+  optButtons($('#oTheme'), [['tag','TAG'],['nacht','NACHT'],['matrix','MATRIX']], 'theme');
+  optButtons($('#oFont'), Object.entries(FONTS).map(([k,f]) => [k,f.label]), 'font');
+  optButtons($('#oSound'), [[true,'AN'],[false,'AUS']], 'sound');
+  optButtons($('#oComp'), [[true,'AN'],[false,'AUS']], 'companion');
+  $('#oSize').value = S.settings.size;
+  $('#oGoal').value = S.settings.goal;
+}
+$('#oSize').addEventListener('input', e => { S.settings.size = +e.target.value; applySettings(); persist(); });
+$('#oGoal').addEventListener('input', e => { S.settings.goal = Math.max(0, +e.target.value || 0); S.day.celebrated = false; persist(); renderStats(); });
+$('#bSettings').onclick = () => { renderSettings(); showFolderPath(); openModal('#mSettings'); };
+$('#bFolder').onclick = chooseFolder;
+$('#bFolder2').onclick = async () => { closeModals(); await chooseFolder(); };
+$('#bComp').onclick = () => { $('#mSettings').classList.remove('open'); renderSettings(); $('#mCompanion').classList.add('open'); $('#cBack').focus(); };
+$('#cBack').onclick = () => { $('#mCompanion').classList.remove('open'); renderSettings(); $('#mSettings').classList.add('open'); $('#bComp').focus(); };
+
+/* keys */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){
+    if (document.querySelector('.scrim.open')) closeModals();
+    else if (document.body.classList.contains('focus')) setFocus(false);
+    else document.body.classList.remove('drawer');
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+    e.preventDefault(); saveT = saveT || setTimeout(()=>{},0); flushSave(); blip('save'); say('Gespeichert!');
+  }
+  if (e.key === 'Tab' && document.activeElement === ed && !e.shiftKey && !e.ctrlKey && !e.defaultPrevented){
+    // tab inserts indentation instead of leaving the editor
+    e.preventDefault();
+    const s = ed.selectionStart, en = ed.selectionEnd;
+    ed.setRangeText('    ', s, en, 'end'); ed.dispatchEvent(new Event('input'));
+  }
+});
+
+/* init */
+async function init(){
+  applySettings();
+  let firstRun = false;
+  if (DESK){
+    if (!S.folder){ firstRun = true; try { S.folder = await invoke('default_dir'); } catch(e){ showBanner('Kein Standardordner: ' + e); } }
+    await loadFolder();
+    showFolderPath();
+    window.addEventListener('focus', refreshFromDisk);
+    if (T.event && T.event.listen){
+      T.event.listen('writy-close', async () => {
+        flushSave();
+        try { await queueDiskSave(); } catch(e){}
+        invoke('quit_app');
+      });
+    }
+  }
+  const nb = normBullets(cur().text); if (nb !== cur().text){ cur().text = nb; cur()._dirty = true; }
+  ed.value = cur().text;
+  lastMilestone = Math.floor(totalWords()/100);
+  renderList(); renderStats(); wake();
+  if (firstRun) openModal('#mFolder');
+  setTimeout(() => say('Hi! Ich bin Klecks.', 'hop', 2600), 500);
+}
+init();
+})();
+</script>
+</body>
+</html>
