@@ -207,6 +207,24 @@ body.no-companion .mascot,body.no-companion .bubble,body.no-companion .zzz{displ
 .desk-only{display:none!important}
 body.desktop .desk-only{display:flex!important}
 .folder-path{flex-basis:100%;font-family:'Atkinson Hyperlegible',sans-serif;font-size:13px;line-height:1.4;word-break:break-all;opacity:.85;padding:8px 10px;background:var(--paper);box-shadow:inset 0 0 0 2px var(--ink-soft)}
+/* sticky notes */
+.sticky{position:fixed;z-index:30;display:flex;flex-direction:column;min-width:180px;min-height:140px;
+  resize:both;overflow:hidden;color:#3b2a4a;background:var(--st,#ffe9a8);margin:0}
+.sticky .st-head{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;cursor:grab;user-select:none;
+  background:rgba(0,0,0,.08);border-bottom:3px solid #3b2a4a;font-size:8px;touch-action:none}
+.sticky.drag .st-head{cursor:grabbing}
+.sticky .st-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.5px}
+.sticky .st-btn{border:0;background:transparent;color:inherit;font-family:var(--ui);font-size:9px;cursor:pointer;padding:4px 5px;line-height:1}
+.sticky .st-btn:hover{background:rgba(0,0,0,.12)}
+.sticky .st-dot{width:12px;height:12px;padding:0;margin:0 4px;box-shadow:inset 0 0 0 2px #3b2a4a;background:var(--st2,#ffd166)}
+.sticky textarea{flex:1;width:100%;border:0;outline:none;resize:none;background:transparent;color:inherit;
+  padding:10px 12px 14px;line-height:1.5;caret-color:#ff6f91}
+.sticky textarea::placeholder{color:#3b2a4a;opacity:.5}
+.sticky.flash{animation:stflash .5s steps(2) 2}
+@keyframes stflash{50%{filter:brightness(1.25)}}
+[data-theme="matrix"] .sticky{--st:#021006!important;color:var(--ink);text-shadow:0 0 3px rgba(57,255,106,.5)}
+[data-theme="matrix"] .sticky .st-head{border-bottom-color:var(--ink)}
+[data-theme="nacht"] .sticky{filter:saturate(.85) brightness(.92)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -299,6 +317,7 @@ body.desktop .desk-only{display:flex!important}
       <button class="btn sky" id="eTxt">.TXT</button>
       <button class="btn sky" id="eMd">.MD</button>
       <button class="btn butter" id="eCopy">KOPIEREN</button>
+      <button class="btn mint" id="eSticky">STICKY NOTE</button>
     </div>
     <div class="actions"><button class="btn ghost" data-close>ZURÜCK</button></div>
   </div>
@@ -424,7 +443,7 @@ async function diskSaveNow(){
       if (d._auto !== false && !sameBase(d.id, base)){
         const nn = uniqueName(base, d.id), old = d.id;
         if (d._onDisk) await invoke('rename_doc', {dir:S.folder, from:old, to:nn});
-        d.id = nn; if (S.current === old) S.current = nn;
+        d.id = nn; if (S.current === old) S.current = nn; stickyRenamed(old, nn);
         renderList(); persistMetaOnly();
       }
       await invoke('write_doc', {dir:S.folder, name:d.id, text:toDisk(d.text)});
@@ -467,7 +486,7 @@ async function refreshFromDisk(){
   list.forEach(f => { if (!S.docs.some(d => d.id.toLowerCase() === f.name.toLowerCase())) S.docs.push(docFromFile(f)); });
   if (!S.docs.length || !cur()){ finishLoad(); changedCur = true; persist(); }
   if (changedCur){ const p = ed.selectionStart; ed.value = cur().text; const q = Math.min(p, ed.value.length); ed.setSelectionRange(q, q); }
-  renderList(); renderStats();
+  renderList(); renderStats(); syncStickies();
 }
 function showFolderPath(){ $('#folderPath').textContent = S.folder || ''; $('#folderPath2').textContent = S.folder || ''; }
 async function chooseFolder(){
@@ -601,6 +620,7 @@ function applySettings(){
   ed.style.fontSize = Math.round(S.settings.size * f.scale) + 'px';
   $('#fontPrev').style.fontFamily = f.css;
   $('#fontPrev').style.fontSize = Math.round(18 * f.scale) + 'px';
+  if (typeof syncStickies === 'function' && S.stickies) syncStickies();
 }
 function openDoc(id){
   flushSave();
@@ -726,7 +746,7 @@ ed.addEventListener('keydown', e => {
 ed.addEventListener('input', () => {
   wake(); setDirty(true);
   cur().text = ed.value; cur().updated = Date.now(); cur()._dirty = true;
-  renderStats();
+  renderStats(); syncStickies();
   clearTimeout(saveT); saveT = setTimeout(flushSave, 600);
   const m = Math.floor(totalWords()/100);
   if (m > lastMilestone){ lastMilestone = m; if (Math.random() < .6) say(CHEERS[Math.floor(Math.random()*6)]); }
@@ -766,6 +786,7 @@ $('#confYes').onclick = async () => {
     }
   }
   S.docs = S.docs.filter(d => d.id !== id);
+  S.stickies.filter(st => st.docId === id).forEach(st => closeSticky(st.sid));
   if (!S.docs.length) S.docs.push({id: DESK ? uniqueName('Ohne Titel', null) : uid(), text:'', created:Date.now(), updated:Date.now(), _dirty:true});
   if (!S.docs.find(d => d.id === S.current)) S.current = [...S.docs].sort((a,b)=>b.updated-a.updated)[0].id;
   S.day.baseline = Math.min(S.day.baseline, totalWords());
@@ -844,6 +865,87 @@ document.addEventListener('fullscreenchange', () => {
   if (DESK) return;
   fsOn = !!document.fullscreenElement; document.body.classList.toggle('fullscreen', fsOn); renderFull();
 });
+
+/* ---------- sticky notes ---------- */
+const ST_COLORS = [['#ffe9a8','#ffd166'],['#c9f5e6','#6fd6b6'],['#ffd3df','#ff9eb5'],['#cfe9f7','#8ecae6'],['#e3d6ff','#c3a6ff']];
+S.stickies = Array.isArray(S.stickies) ? S.stickies : [];
+let stZ = 31;
+const stEl = sid => document.querySelector(`.sticky[data-sid="${sid}"]`);
+const docById = id => S.docs.find(d => d.id === id);
+function stFont(){ const f = FONTS[S.settings.font] || FONTS.pixel; return {css:f.css, size:Math.max(13, Math.round(S.settings.size * f.scale * .8))}; }
+function openSticky(docId){
+  const ex = S.stickies.find(x => x.docId === docId);
+  if (ex){ const el = stEl(ex.sid); if (el){ el.style.zIndex = ++stZ; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } return; }
+  const n = S.stickies.length;
+  const st = {sid:uid(), docId, color:n % ST_COLORS.length, x:Math.max(10, innerWidth - 300 - n*28), y:90 + n*28, w:260, h:240};
+  S.stickies.push(st); persist();
+  renderSticky(st);
+  blip('new'); say('Sticky Note ist da!');
+}
+function renderSticky(st){
+  const d = docById(st.docId); if (!d) return;
+  const el = document.createElement('div');
+  el.className = 'sticky px-drop'; el.dataset.sid = st.sid;
+  el.innerHTML = `<div class="st-head"><span class="st-title"></span><button class="st-btn st-dot" title="Farbe wechseln" aria-label="Farbe wechseln"></button><button class="st-btn st-open" title="Im Editor öffnen" aria-label="Im Editor öffnen">↗</button><button class="st-btn st-x" title="Schließen" aria-label="Sticky Note schließen">✕</button></div><textarea spellcheck="true" placeholder="Notiz …"></textarea>`;
+  const ta = el.querySelector('textarea');
+  const paint = () => { const c = ST_COLORS[st.color % ST_COLORS.length]; el.style.setProperty('--st', c[0]); el.style.setProperty('--st2', c[1]); };
+  const fit = () => {
+    st.w = Math.min(st.w, innerWidth - 16); st.h = Math.min(st.h, innerHeight - 16);
+    st.x = Math.min(Math.max(4, st.x), innerWidth - 80); st.y = Math.min(Math.max(4, st.y), innerHeight - 40);
+    Object.assign(el.style, {left:st.x+'px', top:st.y+'px', width:st.w+'px', height:st.h+'px'});
+  };
+  paint(); fit();
+  const f = stFont(); ta.style.fontFamily = f.css; ta.style.fontSize = f.size + 'px';
+  ta.value = d.text;
+  el.querySelector('.st-title').textContent = titleOf(d).toUpperCase();
+  el.style.zIndex = ++stZ;
+  document.body.appendChild(el);
+
+  el.addEventListener('pointerdown', () => { el.style.zIndex = ++stZ; });
+  // drag by header
+  const head = el.querySelector('.st-head');
+  head.addEventListener('pointerdown', e => {
+    if (e.target.closest('.st-btn')) return;
+    e.preventDefault(); head.setPointerCapture(e.pointerId); el.classList.add('drag');
+    const ox = e.clientX - st.x, oy = e.clientY - st.y;
+    const mv = ev => { st.x = ev.clientX - ox; st.y = ev.clientY - oy; fit(); };
+    const up = () => { el.classList.remove('drag'); head.removeEventListener('pointermove', mv); head.removeEventListener('pointerup', up); persist(); };
+    head.addEventListener('pointermove', mv); head.addEventListener('pointerup', up);
+  });
+  // remember size after resizing
+  let rT; new ResizeObserver(() => { const r = el.getBoundingClientRect(); if (Math.abs(r.width - st.w) > 2 || Math.abs(r.height - st.h) > 2){ st.w = Math.round(r.width); st.h = Math.round(r.height); clearTimeout(rT); rT = setTimeout(persist, 400); } }).observe(el);
+  el.querySelector('.st-dot').onclick = () => { st.color = (st.color + 1) % ST_COLORS.length; paint(); persist(); blip('click'); };
+  el.querySelector('.st-open').onclick = () => { if (docById(st.docId)) openDoc(st.docId); };
+  el.querySelector('.st-x').onclick = () => closeSticky(st.sid);
+  // typing in the note writes into the document
+  let stT;
+  ta.addEventListener('input', () => {
+    const doc = docById(st.docId); if (!doc) return;
+    doc.text = ta.value; doc.updated = Date.now(); doc._dirty = true;
+    el.querySelector('.st-title').textContent = titleOf(doc).toUpperCase();
+    if (doc.id === S.current){ const p = ed.selectionStart, q = ed.selectionEnd; ed.value = doc.text; ed.setSelectionRange(Math.min(p, ed.value.length), Math.min(q, ed.value.length)); renderStats(); }
+    wake(); setDirty(true); clearTimeout(stT); stT = setTimeout(() => { persist(); setDirty(false); renderList(); }, 600);
+  });
+}
+function closeSticky(sid){
+  const el = stEl(sid); if (el) el.remove();
+  S.stickies = S.stickies.filter(x => x.sid !== sid); persist(); blip('del');
+}
+// keep open notes in sync with the main editor, renames and deletions
+function syncStickies(){
+  S.stickies.slice().forEach(st => {
+    const el = stEl(st.sid), d = docById(st.docId);
+    if (!d){ if (el) el.remove(); S.stickies = S.stickies.filter(x => x !== st); return; }
+    if (!el) return;
+    const ta = el.querySelector('textarea');
+    if (document.activeElement !== ta && ta.value !== d.text) ta.value = d.text;
+    el.querySelector('.st-title').textContent = titleOf(d).toUpperCase();
+    const f = stFont(); ta.style.fontFamily = f.css; ta.style.fontSize = f.size + 'px';
+  });
+}
+function stickyRenamed(oldId, newId){ S.stickies.forEach(st => { if (st.docId === oldId) st.docId = newId; }); }
+$('#eSticky').onclick = () => { flushSave(); closeModals(); openSticky(S.current); };
+window.addEventListener('resize', () => S.stickies.forEach(st => { const el = stEl(st.sid); if (el){ st.x = Math.min(st.x, innerWidth - 80); st.y = Math.min(st.y, innerHeight - 40); el.style.left = st.x + 'px'; el.style.top = st.y + 'px'; } }));
 
 /* focus */
 function setFocus(on){
@@ -933,6 +1035,7 @@ async function init(){
   ed.value = cur().text;
   lastMilestone = Math.floor(totalWords()/100);
   renderList(); renderStats(); wake();
+  S.stickies = S.stickies.filter(st => docById(st.docId)); S.stickies.forEach(renderSticky);
   if (firstRun) openModal('#mFolder');
   setTimeout(() => say('Hi! Ich bin Writy.', 'hop', 2600), 500);
 }
