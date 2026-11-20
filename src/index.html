@@ -375,6 +375,10 @@ function load(){
 }
 let S = load() || {};
 S.docs = DESK ? [] : (Array.isArray(S.docs) ? S.docs : []);
+if (!DESK && Array.isArray(S.docs) && !S.bulletBase){
+  S.docs.forEach(d => { d.text = d.text.replace(/^( *)([•◦▪] )/gm, '    $1$2'); });
+}
+S.bulletBase = 1;
 S.settings = Object.assign({theme:'tag', font:'pixel', size:20, goal:500, sound:true, companion:true}, S.settings||{});
 const WELCOME = 'Willkommen bei Writy!\n\nHier schreibst du einfach drauflos. ' +
   (DESK ? 'Jedes Dokument wird automatisch als .md-Datei in deinem Writy-Ordner gespeichert.' : 'Alles wird automatisch in deinem Browser gespeichert.') +
@@ -413,10 +417,10 @@ const titleOf = d => {
 };
 
 /* ---------- desktop: files on disk ---------- */
-const toDisk = t => t.replace(/^(\s*)[•◦▪] /gm, '$1- ');
+const toDisk = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => ind.slice(BASE.length) + '- ');
 const fromDisk = t => t.replace(/\r\n?/g, '\n')
   .replace(/^\t+(?=[-*+] |\d{1,4}[.)] )/gm, m => '    '.repeat(m.length))
-  .replace(/^( *)[-*+] /gm, (m, ind) => ind + bulFor(ind));
+  .replace(/^( *)[-*+] /gm, (m, ind) => BASE + ind + bulFor(BASE + ind));
 function sanitizeName(t){
   let n = t.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '').trim();
   if (!n) n = 'Ohne Titel';
@@ -646,8 +650,10 @@ function flushSave(){
 }
 /* ---------- bullet lists ---------- */
 const BULS = ['• ', '◦ ', '▪ '];
-const bulFor = ind => BULS[Math.floor(ind.replace(/\t/g,'    ').length / 4) % 3];
-const normBullets = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => ind + bulFor(ind));
+const BASE = '    ';   // bullets sit one step to the right
+const bulLevel = ind => Math.max(0, Math.floor((ind.replace(/\t/g,'    ').length - BASE.length) / 4));
+const bulFor = ind => BULS[bulLevel(ind) % 3];
+const normBullets = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => { if (ind.length < BASE.length) ind = BASE; return ind + bulFor(ind); });
 const lineStart = pos => ed.value.lastIndexOf('\n', pos - 1) + 1;
 const lineEnd = pos => { const i = ed.value.indexOf('\n', pos); return i === -1 ? ed.value.length : i; };
 function replaceRange(a, b, text){
@@ -661,7 +667,7 @@ ed.addEventListener('input', e => {
   const c = ed.selectionStart; if (c !== ed.selectionEnd) return;
   const ls = lineStart(c), before = ed.value.slice(ls, c);
   const m = before.match(/^(\s*)[-*] $/);
-  if (m) replaceRange(ls + m[1].length, c, bulFor(m[1]));
+  if (m){ const ind = m[1].length < BASE.length ? BASE : m[1]; replaceRange(ls, c, ind + bulFor(ind)); }
 });
 function marker(line){
   let m = line.match(/^(\s*)[•◦▪] /);
@@ -714,7 +720,7 @@ ed.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && collapsed && c >= mEnd){
     e.preventDefault();
     if (line.slice(mk.len).trim() === ''){
-      if (indent.length >= 4){
+      if (indent.length >= (mk.type === 'b' ? BASE.length + 4 : 4)){
         const ni = indent.slice(4), nm = markFor(ni, idx);
         replaceRange(ls, le, ni + nm);
         if (mk.type === 'n') renumber(idx + 1, ni, parseInt(nm) + 1);
@@ -726,13 +732,17 @@ ed.addEventListener('keydown', e => {
       if (mk.type === 'n') renumber(idx + 2, indent, mk.n + 2);
     }
   } else if (e.key === 'Backspace' && collapsed && c === mEnd){
-    e.preventDefault(); replaceRange(ls + indent.length, mEnd, '');
+    e.preventDefault(); replaceRange(mk.type === 'b' && indent.length <= BASE.length ? ls : ls + indent.length, mEnd, '');
     if (mk.type === 'n') renumber(idx + 1, indent, mk.n);
   } else if (e.key === 'Tab' && !e.ctrlKey && !e.altKey){
     e.preventDefault(); e.stopPropagation();
     const off = c - mEnd;
     let ni;
-    if (e.shiftKey){ if (!indent.length) return; ni = indent.slice(0, Math.max(0, indent.length - 4)); }
+    if (e.shiftKey){
+      const min = mk.type === 'b' ? BASE.length : 0;
+      if (indent.length <= min) return;
+      ni = indent.slice(0, Math.max(min, indent.length - 4));
+    }
     else ni = indent + '    ';
     const nm = mk.type === 'b' ? bulFor(ni) : (e.shiftKey ? nextNumber(lines, idx, ni) : 1) + mk.sep + ' ';
     replaceRange(ls, mEnd, ni + nm);
@@ -814,7 +824,7 @@ const safeName = d => (titleOf(d).replace(/[\\/:*?"<>|…]+/g,'').replace(/\s+/g
 async function saveFile(ext){
   flushSave();
   const d = cur(), name = safeName(d) + '.' + ext;
-  const body = ext === 'md' ? d.text.replace(/^(\s*)[•◦▪] /gm, '$1- ') : d.text;
+  const body = ext === 'md' ? toDisk(d.text) : d.text;
   if (DESK){
     try { const ok = await invoke('save_as', {name, text:body}); if (ok){ closeModals(); blip('save'); say('Datei gespeichert!'); } }
     catch(err){ say('Speichern ging nicht.', 'wiggle', 3000); showBanner(String(err)); }
