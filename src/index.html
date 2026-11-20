@@ -31,7 +31,7 @@
   --cheek:#0e4a20; --select:#39ff6a55;
 }
 [data-theme="matrix"] body{text-shadow:0 0 3px rgba(57,255,106,.55)}
-[data-theme="matrix"] textarea#ed{text-shadow:0 0 4px rgba(57,255,106,.6)}
+[data-theme="matrix"] .cm-content{text-shadow:0 0 4px rgba(57,255,106,.6)}
 [data-theme="matrix"] .btn,[data-theme="matrix"] .btn.berry,[data-theme="matrix"] .opts .btn.on,
 [data-theme="matrix"] .doc.active,[data-theme="matrix"] .banner{color:#001a06;text-shadow:none}
 [data-theme="matrix"] .btn.ghost{color:var(--ink);text-shadow:0 0 3px rgba(57,255,106,.55)}
@@ -131,13 +131,34 @@ main{position:relative;min-height:0;display:flex;flex-direction:column;margin:4p
 .save-state::before{content:"";width:8px;height:8px;flex:0 0 8px;background:var(--mint);box-shadow:0 0 0 2px var(--ink)}
 .save-state.dirty{color:var(--berry)}
 .save-state.dirty::before{background:var(--berry)}
-textarea#ed{
-  flex:1;width:100%;resize:none;border:0;outline:none;background:transparent;color:var(--ink);
-  padding:28px clamp(18px,6vw,80px) 90px;line-height:1.65;
-  font-family:'Pixelify Sans',sans-serif;font-size:20px;
-  caret-color:var(--berry);
-}
-textarea#ed::placeholder{color:var(--ink-soft);opacity:.7}
+/* editor (CodeMirror) */
+#ed{flex:1;min-height:0;display:flex;--ed-font:'Pixelify Sans',sans-serif;--ed-size:20px}
+#ed .cm-editor{flex:1;height:100%;background:transparent;color:var(--ink)}
+#ed .cm-editor.cm-focused{outline:none}
+#ed .cm-scroller{font-family:var(--ed-font);font-size:var(--ed-size);line-height:1.65;overflow:auto}
+#ed .cm-content{padding:28px clamp(18px,6vw,80px) 90px;caret-color:var(--berry)}
+#ed .cm-line{padding:0}
+.cm-editor ::selection{background:var(--select)}
+.cm-placeholder{color:var(--ink-soft);opacity:.7}
+.cm-h{font-weight:700;line-height:1.35}
+.cm-h1{font-size:1.75em;padding-top:.35em!important}
+.cm-h2{font-size:1.45em;padding-top:.3em!important}
+.cm-h3{font-size:1.22em;padding-top:.2em!important}
+.cm-h4,.cm-h5,.cm-h6{font-size:1.05em}
+.cm-h1 .cm-strong,.cm-h2 .cm-strong{font-weight:700}
+.cm-strong{font-weight:700}
+.cm-em{font-style:italic}
+.cm-strike{text-decoration:line-through;text-decoration-thickness:2px;opacity:.75}
+.cm-icode{font-family:'VT323',monospace;font-size:1.15em;background:var(--panel);padding:0 4px;box-shadow:inset 0 0 0 2px var(--ink-soft)}
+.cm-mark{background:color-mix(in srgb,var(--butter) 70%,transparent);color:#3b2a4a;padding:0 2px}
+.cm-link{color:var(--berry);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.cm-fmark{opacity:.4}
+.cm-quote{border-left:4px solid var(--lilac);padding-left:16px!important;color:var(--ink-soft)}
+.cm-hr{background:linear-gradient(var(--ink),var(--ink)) center/100% 4px no-repeat}
+.cm-li{padding-left:1.6em}
+.cm-bullet{font-family:'WrityBullets',sans-serif;display:inline-block;min-width:.8em;text-align:center}
+.cm-codeblock{font-family:'VT323',monospace;font-size:1.1em;background:var(--panel)}
+[data-theme="matrix"] .cm-mark{background:#0e4a20;color:var(--ink)}
 
 /* mascot */
 .mascot{position:absolute;right:18px;bottom:14px;width:70px;height:65px;cursor:pointer;z-index:3}
@@ -197,7 +218,7 @@ body.focus header .logo h1{opacity:.4}
   .side-toggle{display:inline-block}
   .logo h1{font-size:11px}
   .btn{font-size:9px;padding:9px 9px}
-  textarea#ed{padding:20px 16px 90px}
+  #ed .cm-content{padding:20px 16px 90px}
   .goal{margin-left:0}
   .mascot{width:48px;height:45px;right:10px;bottom:8px}
   .bubble{right:64px;bottom:36px}
@@ -219,9 +240,12 @@ body.desktop .desk-only{display:flex!important}
 .sticky .st-btn{border:0;background:transparent;color:inherit;font-family:var(--ui);font-size:9px;cursor:pointer;padding:4px 5px;line-height:1}
 .sticky .st-btn:hover{background:rgba(0,0,0,.12)}
 .sticky .st-dot{width:12px;height:12px;padding:0;margin:0 4px;box-shadow:inset 0 0 0 2px #3b2a4a;background:var(--st2,#ffd166)}
-.sticky textarea{flex:1;width:100%;border:0;outline:none;resize:none;background:transparent;color:inherit;
-  padding:10px 12px 14px;line-height:1.5;caret-color:#ff6f91}
-.sticky textarea::placeholder{color:#3b2a4a;opacity:.5}
+.sticky .st-ed{flex:1;min-height:0;display:flex}
+.sticky .cm-editor{flex:1;height:100%;background:transparent;color:inherit}
+.sticky .cm-editor.cm-focused{outline:none}
+.sticky .cm-scroller{font-family:var(--ed-font);font-size:var(--ed-size);line-height:1.5}
+.sticky .cm-content{padding:10px 12px 14px;caret-color:#ff6f91}
+.sticky .cm-line{padding:0}
 .sticky.flash{animation:stflash .5s steps(2) 2}
 @keyframes stflash{50%{filter:brightness(1.25)}}
 [data-theme="matrix"] .sticky{--st:#021006!important;color:var(--ink);text-shadow:0 0 3px rgba(57,255,106,.5)}
@@ -268,7 +292,7 @@ body.desktop .desk-only{display:flex!important}
         <div class="doc-title" id="docTitle">Ohne Titel</div>
         <div class="save-state" id="saveState">GESPEICHERT</div>
       </div>
-      <textarea id="ed" spellcheck="true" placeholder="Einfach losschreiben …&#10;&#10;Die erste Zeile wird zum Titel."></textarea>
+      <div id="ed"></div>
       <div class="bubble px" id="bubble"></div>
       <div class="mascot" id="mascot" title="Writy" role="img" aria-label="Writy, dein Schreibbegleiter"></div>
       <div class="zzz">Z z</div>
@@ -345,6 +369,7 @@ body.desktop .desk-only{display:flex!important}
   </div>
 </div>
 
+<script src="vendor/writy-editor.js"></script>
 <script>
 (() => {
 'use strict';
@@ -375,14 +400,17 @@ function load(){
 }
 let S = load() || {};
 S.docs = DESK ? [] : (Array.isArray(S.docs) ? S.docs : []);
-if (!DESK && Array.isArray(S.docs) && !S.bulletBase){
-  S.docs.forEach(d => { d.text = d.text.replace(/^( *)([•◦▪] )/gm, '    $1$2'); });
+// earlier versions kept bullets as • ◦ ▪ in the text – turn them back into Markdown
+const legacyToMd = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => ind.slice(4) + '- ');
+if (!DESK && Array.isArray(S.docs)){
+  if (!S.bulletBase) S.docs.forEach(d => { d.text = d.text.replace(/^( *)([•◦▪] )/gm, '    $1$2'); });
+  S.docs.forEach(d => { d.text = legacyToMd(d.text); });
 }
 S.bulletBase = 1;
 S.settings = Object.assign({theme:'tag', font:'pixel', size:20, goal:500, sound:true, companion:true}, S.settings||{});
-const WELCOME = 'Willkommen bei Writy!\n\nHier schreibst du einfach drauflos. ' +
+const WELCOME = '# Willkommen bei Writy!\n\nHier schreibst du einfach drauflos. ' +
   (DESK ? 'Jedes Dokument wird automatisch als .md-Datei in deinem Writy-Ordner gespeichert.' : 'Alles wird automatisch in deinem Browser gespeichert.') +
-  '\n\n• Die erste Zeile ist der Titel des Dokuments' + (DESK ? ' und der Dateiname' : '') + '.\n• FOKUS blendet alles aus außer deinem Text (Esc beendet ihn).\n• Unter OPTIONEN findest du Schriften, den Nachtmodus und dein Tagesziel.\n• Tipp „- “ oder „1. “ am Zeilenanfang für eine Liste.\n• Klick auf Writy unten rechts, wenn du Zuspruch brauchst.\n\nDieses Dokument kannst du einfach löschen.';
+  '\n\n## Formatieren wie in Obsidian\n- **fett** mit `**Text**` oder Strg+B\n- *kursiv* mit `*Text*` oder Strg+I\n- ~~durchgestrichen~~ mit `~~Text~~`, ==markiert== mit `==Text==`\n- `#`, `##`, `###` am Zeilenanfang machen Überschriften\n- `>` am Zeilenanfang macht ein Zitat, `---` eine Trennlinie\n- -> wird zu →, <- zu ←, => zu ⇒\n\n## Listen\n- `- ` oder `1. ` am Zeilenanfang startet eine Liste\n    - Tab rückt ein, Shift+Tab wieder aus\n\n> Die erste Zeile ist der Titel' + (DESK ? ' und der Dateiname' : '') + '. Klick auf Writy unten rechts, wenn du Zuspruch brauchst.\n\nDieses Dokument kannst du einfach löschen.';
 const totalWords = () => S.docs.reduce((n,d) => n + countWords(d.text), 0);
 function finishLoad(){
   if (!S.docs.length) {
@@ -410,17 +438,16 @@ function showBanner(msg){ const b=$('#banner'); b.textContent=msg; b.classList.a
 if (!storageOk) setTimeout(()=>showBanner('Speichern im Browser klappt hier gerade nicht. Exportiere deine Texte, bevor du die Seite schließt.'), 400);
 
 const cur = () => S.docs.find(d => d.id === S.current);
-const titleRaw = d => (d.text.split('\n').find(l => l.trim()) || '').replace(/^#+\s*/,'').replace(/^\s*([•◦▪]|\d{1,4}[.)])\s+/,'').trim();
+const titleRaw = d => (d.text.split('\n').find(l => l.trim() && !/^\s*(-{3,}|\*{3,})\s*$/.test(l)) || '')
+  .replace(/^\s*(#{1,6}\s+|>\s*|[-*+•◦▪]\s+|\d{1,4}[.)]\s+)/,'').replace(/(\*\*|__|~~|==|`|\*|_)/g,'').trim();
 const titleOf = d => {
   const line = (d.text.split('\n').find(l => l.trim()) || '').replace(/^#+\s*/,'').trim();
   return line ? (line.length > 48 ? line.slice(0,48)+'…' : line) : 'Ohne Titel';
 };
 
 /* ---------- desktop: files on disk ---------- */
-const toDisk = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => ind.slice(BASE.length) + '- ');
-const fromDisk = t => t.replace(/\r\n?/g, '\n')
-  .replace(/^\t+(?=[-*+] |\d{1,4}[.)] )/gm, m => '    '.repeat(m.length))
-  .replace(/^( *)[-*+] /gm, (m, ind) => BASE + ind + bulFor(BASE + ind));
+const toDisk = t => legacyToMd(t);
+const fromDisk = t => t.replace(/\r\n?/g, '\n');
 function sanitizeName(t){
   let n = t.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '').trim();
   if (!n) n = 'Ohne Titel';
@@ -502,7 +529,7 @@ async function chooseFolder(){
   flushSave(); try { await diskChain; } catch(e){}
   S.folder = p; S.current = null;
   await loadFolder();
-  ed.value = cur().text; renderList(); renderStats(); showFolderPath();
+  ed.load(cur().text); renderList(); renderStats(); showFolderPath();
   blip('new'); say('Neuer Ordner geladen!');
 }
 
@@ -574,7 +601,7 @@ const CHEERS = ['Weiter so!','Läuft bei dir.','Satz für Satz!','Ich les heimli
 mascot.addEventListener('click', () => { wake(); blip('click'); say(CHEERS[Math.floor(Math.random()*CHEERS.length)], 'wiggle'); });
 
 /* ---------- rendering ---------- */
-const ed = $('#ed');
+const ed = WrityEditor.create($('#ed'), {placeholder:'Einfach losschreiben …  Die erste Zeile wird zum Titel.'});
 function fmtDate(ts){
   const d = new Date(ts), n = new Date();
   const same = d.toDateString() === n.toDateString();
@@ -622,8 +649,8 @@ function applySettings(){
   document.documentElement.dataset.theme = S.settings.theme;
   document.body.classList.toggle('no-companion', !S.settings.companion);
   const f = FONTS[S.settings.font] || FONTS.pixel;
-  ed.style.fontFamily = f.css;
-  ed.style.fontSize = Math.round(S.settings.size * f.scale) + 'px';
+  $('#ed').style.setProperty('--ed-font', f.css);
+  $('#ed').style.setProperty('--ed-size', Math.round(S.settings.size * f.scale) + 'px');
   $('#fontPrev').style.fontFamily = f.css;
   $('#fontPrev').style.fontSize = Math.round(18 * f.scale) + 'px';
   if (typeof syncStickies === 'function' && S.stickies) syncStickies();
@@ -631,8 +658,7 @@ function applySettings(){
 function openDoc(id){
   flushSave();
   S.current = id; persist();
-  const nb = normBullets(cur().text); if (nb !== cur().text){ cur().text = nb; cur()._dirty = true; }
-  ed.value = cur().text; ed.scrollTop = 0;
+  ed.load(cur().text); ed.scrollTop = 0;
   renderList(); renderStats();
   document.body.classList.remove('drawer');
   ed.focus({preventScroll:true});
@@ -648,114 +674,7 @@ function flushSave(){
   if (d.text !== ed.value){ d.text = ed.value; d.updated = Date.now(); d._dirty = true; }
   persist(); setDirty(false); renderList();
 }
-/* ---------- bullet lists ---------- */
-const BULS = ['• ', '◦ ', '▪ '];
-const BASE = '    ';   // bullets sit one step to the right
-const bulLevel = ind => Math.max(0, Math.floor((ind.replace(/\t/g,'    ').length - BASE.length) / 4));
-const bulFor = ind => BULS[bulLevel(ind) % 3];
-const normBullets = t => t.replace(/^( *)[•◦▪] /gm, (m, ind) => { if (ind.length < BASE.length) ind = BASE; return ind + bulFor(ind); });
-const lineStart = pos => ed.value.lastIndexOf('\n', pos - 1) + 1;
-const lineEnd = pos => { const i = ed.value.indexOf('\n', pos); return i === -1 ? ed.value.length : i; };
-function replaceRange(a, b, text){
-  ed.setSelectionRange(a, b);
-  let ok = false;
-  try { ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete'); } catch(e){}
-  if (!ok){ ed.setRangeText(text, a, b, 'end'); ed.dispatchEvent(new Event('input')); }
-}
-ed.addEventListener('input', e => {
-  if (e.inputType && e.inputType !== 'insertText') return;
-  const c = ed.selectionStart; if (c !== ed.selectionEnd) return;
-  const ls = lineStart(c), before = ed.value.slice(ls, c);
-  const m = before.match(/^(\s*)[-*] $/);
-  if (m){ const ind = m[1].length < BASE.length ? BASE : m[1]; replaceRange(ls, c, ind + bulFor(ind)); }
-});
-function marker(line){
-  let m = line.match(/^(\s*)[•◦▪] /);
-  if (m) return {indent:m[1], len:m[0].length, type:'b'};
-  m = line.match(/^(\s*)(\d{1,4})([.)]) /);
-  if (m) return {indent:m[1], len:m[0].length, type:'n', n:+m[2], sep:m[3]};
-  return null;
-}
-function linesWithPos(){
-  const out = []; let pos = 0;
-  ed.value.split('\n').forEach(t => { out.push({t, s:pos}); pos += t.length + 1; });
-  return out;
-}
-const isDeeper = (t, indent) => t.trim() !== '' && t.startsWith(indent) && /^\s/.test(t.slice(indent.length));
-function nextNumber(lines, idx, indent){
-  for (let i = idx - 1; i >= 0; i--){
-    const mk = marker(lines[i].t);
-    if (mk && mk.type === 'n' && mk.indent === indent) return mk.n + 1;
-    if (isDeeper(lines[i].t, indent)) continue;
-    break;
-  }
-  return 1;
-}
-// make the numbered siblings after line idx count on from n
-function renumber(idx, indent, n){
-  const lines = linesWithPos(), changes = [];
-  for (let i = idx; i < lines.length; i++){
-    const mk = marker(lines[i].t);
-    if (mk && mk.type === 'n' && mk.indent === indent){
-      if (mk.n !== n){ const a = lines[i].s + indent.length; changes.push([a, a + String(mk.n).length, String(n)]); }
-      n++; continue;
-    }
-    if (isDeeper(lines[i].t, indent)) continue;
-    break;
-  }
-  if (!changes.length) return;
-  const a = ed.selectionStart, b = ed.selectionEnd;
-  changes.reverse().forEach(([x, y, t]) => replaceRange(x, y, t));
-  ed.setSelectionRange(a, b);
-}
-ed.addEventListener('keydown', e => {
-  if (e.isComposing) return;
-  const c = ed.selectionStart, collapsed = c === ed.selectionEnd;
-  const ls = lineStart(c), le = lineEnd(c), line = ed.value.slice(ls, le);
-  const mk = marker(line);
-  if (!mk) return;
-  const indent = mk.indent, mEnd = ls + mk.len;
-  const lines = linesWithPos(), idx = ed.value.slice(0, ls).split('\n').length - 1;
-  const markFor = (ind, i) => mk.type === 'b' ? bulFor(ind) : nextNumber(lines, i, ind) + mk.sep + ' ';
-  if (e.key === 'Enter' && !e.shiftKey && collapsed && c >= mEnd){
-    e.preventDefault();
-    if (line.slice(mk.len).trim() === ''){
-      if (indent.length >= (mk.type === 'b' ? BASE.length + 4 : 4)){
-        const ni = indent.slice(4), nm = markFor(ni, idx);
-        replaceRange(ls, le, ni + nm);
-        if (mk.type === 'n') renumber(idx + 1, ni, parseInt(nm) + 1);
-      }
-      else replaceRange(ls, le, '');
-    } else {
-      const nm = mk.type === 'b' ? bulFor(indent) : (mk.n + 1) + mk.sep + ' ';
-      replaceRange(c, c, '\n' + indent + nm);
-      if (mk.type === 'n') renumber(idx + 2, indent, mk.n + 2);
-    }
-  } else if (e.key === 'Backspace' && collapsed && c === mEnd){
-    e.preventDefault(); replaceRange(mk.type === 'b' && indent.length <= BASE.length ? ls : ls + indent.length, mEnd, '');
-    if (mk.type === 'n') renumber(idx + 1, indent, mk.n);
-  } else if (e.key === 'Tab' && !e.ctrlKey && !e.altKey){
-    e.preventDefault(); e.stopPropagation();
-    const off = c - mEnd;
-    let ni;
-    if (e.shiftKey){
-      const min = mk.type === 'b' ? BASE.length : 0;
-      if (indent.length <= min) return;
-      ni = indent.slice(0, Math.max(min, indent.length - 4));
-    }
-    else ni = indent + '    ';
-    const nm = mk.type === 'b' ? bulFor(ni) : (e.shiftKey ? nextNumber(lines, idx, ni) : 1) + mk.sep + ' ';
-    replaceRange(ls, mEnd, ni + nm);
-    const p = ls + ni.length + nm.length + Math.max(0, off);
-    ed.setSelectionRange(p, p);
-    if (mk.type === 'n'){
-      if (e.shiftKey) renumber(idx + 1, ni, parseInt(nm) + 1);
-      else renumber(idx + 1, indent, nextNumber(linesWithPos(), idx + 1, indent));
-    }
-  }
-});
-
-ed.addEventListener('input', () => {
+ed.setOnChange(() => {
   wake(); setDirty(true);
   cur().text = ed.value; cur().updated = Date.now(); cur()._dirty = true;
   renderStats(); syncStickies();
@@ -771,7 +690,7 @@ function newDoc(text='', silent=false){
   flushSave();
   const d = {id: DESK ? uniqueName(sanitizeName(titleRaw({text})), null) : uid(), text, created:Date.now(), updated:Date.now(), _dirty:true};
   S.docs.push(d); S.current = d.id; persist();
-  ed.value = text; renderList(); renderStats();
+  ed.load(text); renderList(); renderStats();
   if (!silent){ blip('new'); say('Neues Blatt!'); }
   document.body.classList.remove('drawer');
   ed.focus();
@@ -802,7 +721,7 @@ $('#confYes').onclick = async () => {
   if (!S.docs.length) S.docs.push({id: DESK ? uniqueName('Ohne Titel', null) : uid(), text:'', created:Date.now(), updated:Date.now(), _dirty:true});
   if (!S.docs.find(d => d.id === S.current)) S.current = [...S.docs].sort((a,b)=>b.updated-a.updated)[0].id;
   S.day.baseline = Math.min(S.day.baseline, totalWords());
-  persist(); ed.value = cur().text; renderList(); renderStats(); ed.focus();
+  persist(); ed.load(cur().text); renderList(); renderStats(); ed.focus();
   blip('del'); say('Weg ist es.', 'wiggle');
 };
 
@@ -824,7 +743,7 @@ const safeName = d => (titleOf(d).replace(/[\\/:*?"<>|…]+/g,'').replace(/\s+/g
 async function saveFile(ext){
   flushSave();
   const d = cur(), name = safeName(d) + '.' + ext;
-  const body = ext === 'md' ? toDisk(d.text) : d.text;
+  const body = d.text;
   if (DESK){
     try { const ok = await invoke('save_as', {name, text:body}); if (ok){ closeModals(); blip('save'); say('Datei gespeichert!'); } }
     catch(err){ say('Speichern ging nicht.', 'wiggle', 3000); showBanner(String(err)); }
@@ -882,6 +801,7 @@ document.addEventListener('fullscreenchange', () => {
 const ST_COLORS = [['#ffe9a8','#ffd166'],['#c9f5e6','#6fd6b6'],['#ffd3df','#ff9eb5'],['#cfe9f7','#8ecae6'],['#e3d6ff','#c3a6ff']];
 S.stickies = Array.isArray(S.stickies) ? S.stickies : [];
 let stZ = 31;
+const stEditors = new Map();
 const stEl = sid => document.querySelector(`.sticky[data-sid="${sid}"]`);
 const docById = id => S.docs.find(d => d.id === id);
 function stFont(){ const f = FONTS[S.settings.font] || FONTS.pixel; return {css:f.css, size:Math.max(13, Math.round(S.settings.size * f.scale * .8))}; }
@@ -898,8 +818,7 @@ function renderSticky(st){
   const d = docById(st.docId); if (!d) return;
   const el = document.createElement('div');
   el.className = 'sticky px-drop'; el.dataset.sid = st.sid;
-  el.innerHTML = `<div class="st-head"><span class="st-title"></span><button class="st-btn st-dot" title="Farbe wechseln" aria-label="Farbe wechseln"></button><button class="st-btn st-open" title="Im Editor öffnen" aria-label="Im Editor öffnen">↗</button><button class="st-btn st-x" title="Schließen" aria-label="Sticky Note schließen">✕</button></div><textarea spellcheck="true" placeholder="Notiz …"></textarea>`;
-  const ta = el.querySelector('textarea');
+  el.innerHTML = `<div class="st-head"><span class="st-title"></span><button class="st-btn st-dot" title="Farbe wechseln" aria-label="Farbe wechseln"></button><button class="st-btn st-open" title="Im Editor öffnen" aria-label="Im Editor öffnen">↗</button><button class="st-btn st-x" title="Schließen" aria-label="Sticky Note schließen">✕</button></div><div class="st-ed"></div>`;
   const paint = () => { const c = ST_COLORS[st.color % ST_COLORS.length]; el.style.setProperty('--st', c[0]); el.style.setProperty('--st2', c[1]); };
   const fit = () => {
     st.w = Math.min(st.w, innerWidth - 16); st.h = Math.min(st.h, innerHeight - 16);
@@ -907,11 +826,12 @@ function renderSticky(st){
     Object.assign(el.style, {left:st.x+'px', top:st.y+'px', width:st.w+'px', height:st.h+'px'});
   };
   paint(); fit();
-  const f = stFont(); ta.style.fontFamily = f.css; ta.style.fontSize = f.size + 'px';
-  ta.value = d.text;
+  const f = stFont(); el.style.setProperty('--ed-font', f.css); el.style.setProperty('--ed-size', f.size + 'px');
   el.querySelector('.st-title').textContent = titleOf(d).toUpperCase();
   el.style.zIndex = ++stZ;
   document.body.appendChild(el);
+  const ta = WrityEditor.create(el.querySelector('.st-ed'), {doc:d.text, placeholder:'Notiz …'});
+  stEditors.set(st.sid, ta);
 
   el.addEventListener('pointerdown', () => { el.style.zIndex = ++stZ; });
   // drag by header
@@ -931,28 +851,28 @@ function renderSticky(st){
   el.querySelector('.st-x').onclick = () => closeSticky(st.sid);
   // typing in the note writes into the document
   let stT;
-  ta.addEventListener('input', () => {
+  ta.setOnChange(() => {
     const doc = docById(st.docId); if (!doc) return;
     doc.text = ta.value; doc.updated = Date.now(); doc._dirty = true;
     el.querySelector('.st-title').textContent = titleOf(doc).toUpperCase();
-    if (doc.id === S.current){ const p = ed.selectionStart, q = ed.selectionEnd; ed.value = doc.text; ed.setSelectionRange(Math.min(p, ed.value.length), Math.min(q, ed.value.length)); renderStats(); }
+    if (doc.id === S.current){ ed.value = doc.text; renderStats(); }
     wake(); setDirty(true); clearTimeout(stT); stT = setTimeout(() => { persist(); setDirty(false); renderList(); }, 600);
   });
 }
 function closeSticky(sid){
-  const el = stEl(sid); if (el) el.remove();
+  const el = stEl(sid); if (el) el.remove(); stEditors.delete(sid);
   S.stickies = S.stickies.filter(x => x.sid !== sid); persist(); blip('del');
 }
 // keep open notes in sync with the main editor, renames and deletions
 function syncStickies(){
   S.stickies.slice().forEach(st => {
     const el = stEl(st.sid), d = docById(st.docId);
-    if (!d){ if (el) el.remove(); S.stickies = S.stickies.filter(x => x !== st); return; }
+    if (!d){ if (el) el.remove(); stEditors.delete(st.sid); S.stickies = S.stickies.filter(x => x !== st); return; }
     if (!el) return;
-    const ta = el.querySelector('textarea');
-    if (document.activeElement !== ta && ta.value !== d.text) ta.value = d.text;
+    const ta = stEditors.get(st.sid);
+    if (ta && !ta.hasFocus && ta.value !== d.text) ta.value = d.text;
     el.querySelector('.st-title').textContent = titleOf(d).toUpperCase();
-    const f = stFont(); ta.style.fontFamily = f.css; ta.style.fontSize = f.size + 'px';
+    const f = stFont(); el.style.setProperty('--ed-font', f.css); el.style.setProperty('--ed-size', f.size + 'px');
   });
 }
 function stickyRenamed(oldId, newId){ S.stickies.forEach(st => { if (st.docId === oldId) st.docId = newId; }); }
@@ -1018,12 +938,6 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
     e.preventDefault(); saveT = saveT || setTimeout(()=>{},0); flushSave(); blip('save'); say('Gespeichert!');
   }
-  if (e.key === 'Tab' && document.activeElement === ed && !e.shiftKey && !e.ctrlKey && !e.defaultPrevented){
-    // tab inserts indentation instead of leaving the editor
-    e.preventDefault();
-    const s = ed.selectionStart, en = ed.selectionEnd;
-    ed.setRangeText('    ', s, en, 'end'); ed.dispatchEvent(new Event('input'));
-  }
 });
 
 /* init */
@@ -1043,8 +957,7 @@ async function init(){
       });
     }
   }
-  const nb = normBullets(cur().text); if (nb !== cur().text){ cur().text = nb; cur()._dirty = true; }
-  ed.value = cur().text;
+  ed.load(cur().text);
   lastMilestone = Math.floor(totalWords()/100);
   renderList(); renderStats(); wake();
   S.stickies = S.stickies.filter(st => docById(st.docId)); S.stickies.forEach(renderSticky);
