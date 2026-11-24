@@ -151,7 +151,7 @@ main{position:relative;min-height:0;display:flex;flex-direction:column;margin:4p
 .cm-strike{text-decoration:line-through;text-decoration-thickness:2px;opacity:.75}
 .cm-icode{font-family:'VT323',monospace;font-size:1.15em;background:var(--panel);padding:0 4px;box-shadow:inset 0 0 0 2px var(--ink-soft)}
 .cm-mark{background:color-mix(in srgb,var(--butter) 70%,transparent);color:#3b2a4a;padding:0 2px}
-.cm-link{color:var(--berry);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.cm-link{color:var(--berry);font-weight:600;background:color-mix(in srgb,var(--berry) 12%,transparent);padding:0 2px}
 .cm-fmark{opacity:.4}
 .cm-quote{border-left:4px solid var(--lilac);padding-left:16px!important;color:var(--ink-soft)}
 .cm-hr{background:linear-gradient(var(--ink),var(--ink)) center/100% 4px no-repeat}
@@ -230,6 +230,16 @@ body.no-companion .mascot,body.no-companion .bubble,body.no-companion .zzz{displ
 .desk-only{display:none!important}
 body.desktop .desk-only{display:flex!important}
 .folder-path{flex-basis:100%;font-family:'Atkinson Hyperlegible',sans-serif;font-size:13px;line-height:1.4;word-break:break-all;opacity:.85;padding:8px 10px;background:var(--paper);box-shadow:inset 0 0 0 2px var(--ink-soft)}
+/* sticky note as its own window (desktop) */
+body.sticky-mode{background:transparent;overflow:hidden}
+body.sticky-mode > *:not(.sticky-win){display:none!important}
+.sticky.sticky-win{position:fixed;inset:0;width:auto;height:auto;resize:none;min-width:0;min-height:0;
+  box-shadow:inset 0 0 0 3px #3b2a4a}
+.sticky-win .st-head{cursor:default}
+.sticky-win .st-pin{font-size:7px;padding:4px 5px;box-shadow:inset 0 0 0 2px transparent}
+.sticky-win .st-pin.on{background:#3b2a4a;color:var(--st,#ffe9a8)}
+.sticky-win .st-grip{position:absolute;right:3px;bottom:3px;width:14px;height:14px;cursor:se-resize;
+  background:linear-gradient(135deg,transparent 0 50%,#3b2a4a 50% 60%,transparent 60% 72%,#3b2a4a 72% 82%,transparent 82%)}
 /* sticky notes */
 .sticky{position:fixed;z-index:30;display:flex;flex-direction:column;min-width:180px;min-height:140px;
   resize:both;overflow:hidden;color:#3b2a4a;background:var(--st,#ffe9a8);margin:0}
@@ -477,10 +487,12 @@ async function diskSaveNow(){
         const nn = uniqueName(base, d.id), old = d.id;
         if (d._onDisk) await invoke('rename_doc', {dir:S.folder, from:old, to:nn});
         d.id = nn; if (S.current === old) S.current = nn; stickyRenamed(old, nn);
-        renderList(); persistMetaOnly();
+        renderList(); persistMetaOnly(); deskStickyRenamed(old, nn);
       }
-      await invoke('write_doc', {dir:S.folder, name:d.id, text:toDisk(d.text)});
+      const out = toDisk(d.text);
+      await invoke('write_doc', {dir:S.folder, name:d.id, text:out});
       d._onDisk = true; diskErrShown = false;
+      tEmit('writy-doc-changed', {folder:S.folder, name:d.id, text:out, src:'main'});
     } catch(err){
       d._dirty = true;
       if (!diskErrShown){ diskErrShown = true; showBanner('Speichern fehlgeschlagen: ' + err + ' – ich versuche es beim nächsten Tippen erneut.'); setDirty(true); }
@@ -715,6 +727,7 @@ $('#confYes').onclick = async () => {
       try { await invoke('delete_doc', {dir:S.folder, name:d.id}); }
       catch(err){ showBanner('Löschen ging nicht: ' + err); return; }
     }
+    deskStickyDeleted(id);
   }
   S.docs = S.docs.filter(d => d.id !== id);
   S.stickies.filter(st => st.docId === id).forEach(st => closeSticky(st.sid));
@@ -876,7 +889,7 @@ function syncStickies(){
   });
 }
 function stickyRenamed(oldId, newId){ S.stickies.forEach(st => { if (st.docId === oldId) st.docId = newId; }); }
-$('#eSticky').onclick = () => { flushSave(); closeModals(); openSticky(S.current); };
+$('#eSticky').onclick = () => { closeModals(); if (DESK) deskOpenSticky(S.current); else { flushSave(); openSticky(S.current); } };
 window.addEventListener('resize', () => S.stickies.forEach(st => { const el = stEl(st.sid); if (el){ st.x = Math.min(st.x, innerWidth - 80); st.y = Math.min(st.y, innerHeight - 40); el.style.left = st.x + 'px'; el.style.top = st.y + 'px'; } }));
 
 /* focus */
@@ -940,8 +953,147 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ---------- desktop: sticky notes as their own windows ---------- */
+const SKEY = 'writy.sticky.';
+const tEmit = (name, payload) => { try { if (DESK && T.event && T.event.emit) T.event.emit(name, payload); } catch(e){} };
+const myLabel = () => { try { return T.window.getCurrentWindow().label; } catch(e){ return 'main'; } };
+function stRecs(){
+  const out = [];
+  try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(SKEY)){ try { out.push(JSON.parse(localStorage.getItem(k))); } catch(e){} } } } catch(e){}
+  return out;
+}
+const stSave = r => { try { localStorage.setItem(SKEY + r.sid, JSON.stringify(r)); } catch(e){} };
+const stDrop = sid => { try { localStorage.removeItem(SKEY + sid); } catch(e){} };
+async function deskOpenSticky(docId){
+  flushSave(); try { await diskChain; } catch(e){}
+  let r = stRecs().find(x => x.docId === docId && x.folder === S.folder);
+  if (!r){
+    const n = stRecs().length;
+    r = {sid: uid().replace(/[^a-z0-9]/gi, ''), docId, folder:S.folder, color:n % ST_COLORS.length, onTop:true, x:null, y:null, w:280, h:260};
+    stSave(r);
+  }
+  try { await invoke('open_sticky', {sid:r.sid, x:r.x, y:r.y, w:r.w, h:r.h, onTop:!!r.onTop}); blip('new'); say('Sticky Note ist da!'); }
+  catch(e){ showBanner('Notiz-Fenster ging nicht auf: ' + e); }
+}
+function deskStickyRenamed(oldId, newId){
+  stRecs().forEach(r => { if (r.folder === S.folder && r.docId === oldId){ r.docId = newId; stSave(r); } });
+  tEmit('writy-doc-renamed', {folder:S.folder, from:oldId, to:newId});
+}
+function deskStickyDeleted(id){
+  stRecs().forEach(r => { if (r.folder === S.folder && r.docId === id) stDrop(r.sid); });
+  tEmit('writy-doc-deleted', {folder:S.folder, name:id});
+}
+async function deskMainListeners(){
+  if (!T.event || !T.event.listen) return;
+  T.event.listen('writy-close', async e => {
+    if (e.payload !== 'main') return;
+    flushSave();
+    try { await queueDiskSave(); } catch(err){}
+    invoke('close_window');
+  });
+  // a note window changed a document
+  T.event.listen('writy-doc-changed', e => {
+    const p = e.payload || {}; if (p.src === 'main' || p.folder !== S.folder) return;
+    const d = docById(p.name);
+    if (!d){ refreshFromDisk(); return; }
+    const t = fromDisk(p.text);
+    if (t === d.text) return;
+    d.text = t; d.updated = Date.now();
+    if (d.id === S.current) ed.value = t;
+    renderList(); renderStats();
+  });
+  T.event.listen('writy-open-doc', e => openFromNote(e.payload && e.payload.name));
+  // reopen the notes that were open last time
+  for (const r of stRecs()){
+    if (r.folder !== S.folder || !docById(r.docId)) continue;
+    try { await invoke('open_sticky', {sid:r.sid, x:r.x, y:r.y, w:r.w, h:r.h, onTop:!!r.onTop, reveal:false}); } catch(e){}
+  }
+  try { const pend = localStorage.getItem('writy.pendingOpen'); if (pend){ localStorage.removeItem('writy.pendingOpen'); openFromNote(pend); } } catch(e){}
+}
+async function openFromNote(name){
+  if (!name) return;
+  if (!docById(name)) await refreshFromDisk();
+  if (docById(name)) openDoc(name);
+}
+
+/* the note window itself */
+async function stickyWindowMain(sid){
+  document.body.classList.add('sticky-mode');
+  applySettings();
+  const win = T.window.getCurrentWindow(), me = win.label;
+  let r = null; try { r = JSON.parse(localStorage.getItem(SKEY + sid)); } catch(e){}
+  if (!r){ invoke('close_window'); return; }
+  const el = document.createElement('div');
+  el.className = 'sticky sticky-win';
+  el.innerHTML = `<div class="st-head" data-tauri-drag-region><span class="st-title" data-tauri-drag-region></span><button class="st-btn st-pin" title="Immer im Vordergrund" aria-label="Immer im Vordergrund">PIN</button><button class="st-btn st-dot" title="Farbe wechseln" aria-label="Farbe wechseln"></button><button class="st-btn st-open" title="In Writy öffnen" aria-label="In Writy öffnen">↗</button><button class="st-btn st-x" title="Notiz schließen" aria-label="Notiz schließen">✕</button></div><div class="st-ed"></div><div class="st-grip" title="Größe ändern"></div>`;
+  document.body.appendChild(el);
+  const paint = () => { const c = ST_COLORS[r.color % ST_COLORS.length]; el.style.setProperty('--st', c[0]); el.style.setProperty('--st2', c[1]); el.querySelector('.st-pin').classList.toggle('on', !!r.onTop); };
+  const fontNow = () => { const f = stFont(); el.style.setProperty('--ed-font', f.css); el.style.setProperty('--ed-size', f.size + 'px'); };
+  paint(); fontNow();
+  const titleEl = el.querySelector('.st-title');
+  const setTitle = t => { const line = titleRaw({text:t}) || 'Notiz'; titleEl.textContent = line.toUpperCase(); try { win.setTitle(line + ' – Writy'); } catch(e){} };
+
+  let doc = null;
+  try { doc = await invoke('read_doc', {dir:r.folder, name:r.docId}); } catch(e){}
+  if (!doc){ titleEl.textContent = 'DOKUMENT FEHLT'; }
+  const edr = WrityEditor.create(el.querySelector('.st-ed'), {doc: doc ? fromDisk(doc.text) : '', placeholder:'Notiz …'});
+  setTitle(edr.value);
+
+  let wT = null, lastWritten = edr.value;
+  async function writeNow(){
+    clearTimeout(wT); wT = null;
+    const text = edr.value; if (text === lastWritten) return;
+    try { await invoke('write_doc', {dir:r.folder, name:r.docId, text}); lastWritten = text; tEmit('writy-doc-changed', {folder:r.folder, name:r.docId, text, src:me}); }
+    catch(e){ titleEl.textContent = 'SPEICHERN FEHLGESCHLAGEN'; }
+  }
+  edr.setOnChange(() => { setTitle(edr.value); clearTimeout(wT); wT = setTimeout(writeNow, 400); });
+
+  T.event.listen('writy-doc-changed', e => {
+    const p = e.payload || {}; if (p.src === me || p.folder !== r.folder || p.name !== r.docId) return;
+    const t = fromDisk(p.text); lastWritten = p.text;
+    if (!edr.hasFocus && edr.value !== t){ edr.value = t; setTitle(t); }
+  });
+  T.event.listen('writy-doc-renamed', e => { const p = e.payload || {}; if (p.folder === r.folder && p.from === r.docId){ r.docId = p.to; stSave(r); } });
+  T.event.listen('writy-doc-deleted', e => { const p = e.payload || {}; if (p.folder === r.folder && p.name === r.docId){ stDrop(r.sid); invoke('close_window'); } });
+  T.event.listen('writy-close', async e => { if (e.payload !== me) return; await writeNow(); invoke('close_window'); });
+  // pick up changes made elsewhere (e.g. Obsidian) when the note gets focus
+  window.addEventListener('focus', async () => {
+    if (wT) return;
+    try { const d = await invoke('read_doc', {dir:r.folder, name:r.docId}); if (d && d.text !== lastWritten){ lastWritten = d.text; edr.value = fromDisk(d.text); setTitle(edr.value); } } catch(e){}
+  });
+  // look & font follow the main window's settings
+  window.addEventListener('storage', e => {
+    if (e.key !== DKEY) return;
+    try { const m = JSON.parse(e.newValue); if (m && m.settings){ Object.assign(S.settings, m.settings); applySettings(); fontNow(); } } catch(err){}
+  });
+
+  el.querySelector('.st-pin').onclick = async () => { r.onTop = !r.onTop; stSave(r); paint(); try { await invoke('set_on_top', {on:!!r.onTop}); } catch(e){} };
+  el.querySelector('.st-dot').onclick = () => { r.color = (r.color + 1) % ST_COLORS.length; stSave(r); paint(); };
+  el.querySelector('.st-open').onclick = async () => {
+    await writeNow();
+    try { localStorage.setItem('writy.pendingOpen', r.docId); } catch(e){}
+    try { await invoke('show_main'); } catch(e){}
+    tEmit('writy-open-doc', {name:r.docId});
+  };
+  el.querySelector('.st-x').onclick = async () => { await writeNow(); stDrop(r.sid); invoke('close_window'); };
+  el.querySelector('.st-grip').addEventListener('pointerdown', e => { e.preventDefault(); try { win.startResizeDragging('SouthEast'); } catch(err){} });
+
+  // remember where the note sits
+  let pT;
+  const remember = async () => {
+    try {
+      const sf = await win.scaleFactor(), pos = await win.outerPosition(), size = await win.innerSize();
+      r.x = Math.round(pos.x / sf); r.y = Math.round(pos.y / sf); r.w = Math.round(size.width / sf); r.h = Math.round(size.height / sf);
+      if (localStorage.getItem(SKEY + r.sid)) stSave(r);
+    } catch(e){}
+  };
+  const later = () => { clearTimeout(pT); pT = setTimeout(remember, 500); };
+  try { win.onMoved(later); win.onResized(later); } catch(e){}
+}
+
 /* init */
 async function init(){
+  if (DESK && window.__WRITY_STICKY){ await stickyWindowMain(window.__WRITY_STICKY); return; }
   applySettings();
   let firstRun = false;
   if (DESK){
@@ -949,18 +1101,12 @@ async function init(){
     await loadFolder();
     showFolderPath();
     window.addEventListener('focus', refreshFromDisk);
-    if (T.event && T.event.listen){
-      T.event.listen('writy-close', async () => {
-        flushSave();
-        try { await queueDiskSave(); } catch(e){}
-        invoke('quit_app');
-      });
-    }
   }
   ed.load(cur().text);
   lastMilestone = Math.floor(totalWords()/100);
   renderList(); renderStats(); wake();
-  S.stickies = S.stickies.filter(st => docById(st.docId)); S.stickies.forEach(renderSticky);
+  if (DESK) deskMainListeners();
+  else { S.stickies = S.stickies.filter(st => docById(st.docId)); S.stickies.forEach(renderSticky); }
   if (firstRun) openModal('#mFolder');
   setTimeout(() => say('Hi! Ich bin Writy.', 'hop', 2600), 500);
 }

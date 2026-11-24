@@ -36,7 +36,7 @@ const hide = Decoration.replace({});
 const MARKS = new Set(['EmphasisMark','StrikethroughMark','CodeMark','HighlightMark','LinkMark']);
 const STYLE = {
   StrongEmphasis: 'cm-strong', Emphasis: 'cm-em', Strikethrough: 'cm-strike',
-  InlineCode: 'cm-icode', Highlight: 'cm-mark', Link: 'cm-link'
+  InlineCode: 'cm-icode', Highlight: 'cm-mark'
 };
 
 function touches(sel, from, to){
@@ -72,6 +72,10 @@ function buildDecos(view){
           else decos.push(hide.range(node.from, node.to));
         } else decos.push(Decoration.mark({class:'cm-fmark'}).range(node.from, node.to));
         return;
+      }
+      if (n === 'Link' || n === 'Image'){
+        if (!node.node.getChild('URL')) return false;          // [Text] ohne Adresse: normaler Text
+        decos.push(Decoration.mark({class: 'cm-link'}).range(node.from, node.to));
       }
       if (STYLE[n]){ if (node.to > node.from) decos.push(Decoration.mark({class: STYLE[n]}).range(node.from, node.to)); }
       if (MARKS.has(n)){
